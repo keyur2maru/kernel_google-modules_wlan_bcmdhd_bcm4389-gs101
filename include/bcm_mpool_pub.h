@@ -35,7 +35,7 @@
  *              and instrumentation on top of the heap, without modifying the heap
  *              allocation implementation.
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -51,8 +51,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcm_mpool_pub.h 535090 2015-02-17 04:49:01Z $
  */
 
 #ifndef _BCM_MPOOL_PUB_H
@@ -169,10 +175,10 @@ int bcm_mpm_deinit(bcm_mpm_mgr_h *mgrp);
  */
 int bcm_mpm_create_prealloc_pool(bcm_mpm_mgr_h mgr,
                                  unsigned int obj_sz,
-                                 uint nobj,
+                                 int nobj,
                                  void *memstart,
                                  unsigned int memsize,
-                                 const char *poolname,
+                                 const char poolname[BCM_MP_NAMELEN],
                                  bcm_mp_pool_h *newp);
 
 /*
@@ -210,7 +216,7 @@ int bcm_mpm_delete_prealloc_pool(bcm_mpm_mgr_h mgr, bcm_mp_pool_h *poolp);
  *
  */
 int bcm_mpm_create_heap_pool(bcm_mpm_mgr_h mgr, unsigned int obj_sz,
-                             const char *poolname,
+                             const char poolname[BCM_MP_NAMELEN],
                              bcm_mp_pool_h *newp);
 
 /*

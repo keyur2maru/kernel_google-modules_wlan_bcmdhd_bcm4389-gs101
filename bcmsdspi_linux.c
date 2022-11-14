@@ -1,7 +1,7 @@
 /*
  * Broadcom SPI Host Controller Driver - Linux Per-port
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,10 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
+ *
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id$
+ * $Id: bcmsdspi_linux.c 514727 2014-11-12 03:02:48Z $
  */
 
 #include <typedefs.h>
@@ -29,15 +33,75 @@
 #include <bcmsdbus.h>		/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>		/* to get msglevel bit values */
 
+#ifdef BCMSPI_ANDROID
 #include <bcmsdh.h>
 #include <bcmspibrcm.h>
 #include <linux/spi/spi.h>
+#else
+#include <pcicfg.h>
+#include <sdio.h>		/* SDIO Device and Protocol Specs */
+#include <linux/sched.h>	/* request_irq(), free_irq() */
+#include <bcmsdspi.h>
+#include <bcmspi.h>
+#endif /* BCMSPI_ANDROID */
+
+#ifndef BCMSPI_ANDROID
+extern uint sd_crc;
+module_param(sd_crc, uint, 0);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define KERNEL26
+#endif // endif
+#endif /* !BCMSPI_ANDROID */
 
 struct sdos_info {
 	sdioh_info_t *sd;
 	spinlock_t lock;
+#ifndef BCMSPI_ANDROID
+	wait_queue_head_t intr_wait_queue;
+#endif /* !BCMSPI_ANDROID */
 };
 
+#ifndef BCMSPI_ANDROID
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define BLOCKABLE()	(!in_atomic())
+#else
+#define BLOCKABLE()	(!in_interrupt())
+#endif // endif
+
+/* Interrupt handler */
+static irqreturn_t
+sdspi_isr(int irq, void *dev_id
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 20)
+, struct pt_regs *ptregs
+#endif // endif
+)
+{
+	sdioh_info_t *sd;
+	struct sdos_info *sdos;
+	bool ours;
+
+	sd = (sdioh_info_t *)dev_id;
+	sd->local_intrcount++;
+
+	if (!sd->card_init_done) {
+		sd_err(("%s: Hey Bogus intr...not even initted: irq %d\n", __FUNCTION__, irq));
+		return IRQ_RETVAL(FALSE);
+	} else {
+		ours = spi_check_client_intr(sd, NULL);
+
+		/* For local interrupts, wake the waiting process */
+		if (ours && sd->got_hcint) {
+			sdos = (struct sdos_info *)sd->sdos_info;
+			wake_up_interruptible(&sdos->intr_wait_queue);
+		}
+
+		return IRQ_RETVAL(ours);
+	}
+}
+#endif /* !BCMSPI_ANDROID */
+
+#ifdef BCMSPI_ANDROID
 static struct spi_device *gBCMSPI = NULL;
 
 extern int bcmsdh_probe(struct device *dev);
@@ -107,11 +171,19 @@ void bcmsdh_unregister_client_driver(void)
 	sd_trace(("%s Enter\n", __FUNCTION__));
 	spi_unregister_driver(&bcmsdh_spi_driver);
 }
+#endif /* BCMSPI_ANDROID */
 
 /* Register with Linux for interrupts */
 int
 spi_register_irq(sdioh_info_t *sd, uint irq)
 {
+#ifndef BCMSPI_ANDROID
+	sd_trace(("Entering %s: irq == %d\n", __FUNCTION__, irq));
+	if (request_irq(irq, sdspi_isr, IRQF_SHARED, "bcmsdspi", sd) < 0) {
+		sd_err(("%s: request_irq() failed\n", __FUNCTION__));
+		return ERROR;
+	}
+#endif /* !BCMSPI_ANDROID */
 	return SUCCESS;
 }
 
@@ -119,9 +191,25 @@ spi_register_irq(sdioh_info_t *sd, uint irq)
 void
 spi_free_irq(uint irq, sdioh_info_t *sd)
 {
+#ifndef BCMSPI_ANDROID
+	free_irq(irq, sd);
+#endif /* !BCMSPI_ANDROID */
 }
 
 /* Map Host controller registers */
+#ifndef BCMSPI_ANDROID
+uint32 *
+spi_reg_map(osl_t *osh, uintptr addr, int size)
+{
+	return (uint32 *)REG_MAP(addr, size);
+}
+
+void
+spi_reg_unmap(osl_t *osh, uintptr addr, int size)
+{
+	REG_UNMAP((void*)(uintptr)addr);
+}
+#endif /* !BCMSPI_ANDROID */
 
 int
 spi_osinit(sdioh_info_t *sd)
@@ -135,6 +223,9 @@ spi_osinit(sdioh_info_t *sd)
 
 	sdos->sd = sd;
 	spin_lock_init(&sdos->lock);
+#ifndef BCMSPI_ANDROID
+	init_waitqueue_head(&sdos->intr_wait_queue);
+#endif /* !BCMSPI_ANDROID */
 	return BCME_OK;
 }
 
@@ -165,10 +256,23 @@ sdioh_interrupt_set(sdioh_info_t *sd, bool enable)
 		return SDIOH_API_RC_FAIL;
 	}
 
+#ifndef BCMSPI_ANDROID
+	if (enable && !(sd->intr_handler && sd->intr_handler_arg)) {
+		sd_err(("%s: no handler registered, will not enable\n", __FUNCTION__));
+		return SDIOH_API_RC_FAIL;
+	}
+#endif /* !BCMSPI_ANDROID */
+
 	/* Ensure atomicity for enable/disable calls */
 	spin_lock_irqsave(&sdos->lock, flags);
 
 	sd->client_intr_enabled = enable;
+#ifndef BCMSPI_ANDROID
+	if (enable && !sd->lockcount)
+		spi_devintr_on(sd);
+	else
+		spi_devintr_off(sd);
+#endif /* !BCMSPI_ANDROID */
 
 	spin_unlock_irqrestore(&sdos->lock, flags);
 
@@ -192,8 +296,12 @@ spi_lock(sdioh_info_t *sd)
 		sd_err(("%s: Already locked!\n", __FUNCTION__));
 		ASSERT(sd->lockcount == 0);
 	}
+#ifdef BCMSPI_ANDROID
 	if (sd->client_intr_enabled)
 		bcmsdh_oob_intr_set(0);
+#else
+	spi_devintr_off(sd);
+#endif /* BCMSPI_ANDROID */
 	sd->lockcount++;
 	spin_unlock_irqrestore(&sdos->lock, flags);
 }
@@ -213,11 +321,41 @@ spi_unlock(sdioh_info_t *sd)
 
 	spin_lock_irqsave(&sdos->lock, flags);
 	if (--sd->lockcount == 0 && sd->client_intr_enabled) {
+#ifdef BCMSPI_ANDROID
 		bcmsdh_oob_intr_set(1);
+#else
+		spi_devintr_on(sd);
+#endif /* BCMSPI_ANDROID */
 	}
 	spin_unlock_irqrestore(&sdos->lock, flags);
 }
 
+#ifndef BCMSPI_ANDROID
+void spi_waitbits(sdioh_info_t *sd, bool yield)
+{
+#ifndef BCMSDYIELD
+	ASSERT(!yield);
+#endif // endif
+	sd_trace(("%s: yield %d canblock %d\n",
+	          __FUNCTION__, yield, BLOCKABLE()));
+
+	/* Clear the "interrupt happened" flag and last intrstatus */
+	sd->got_hcint = FALSE;
+
+#ifdef BCMSDYIELD
+	if (yield && BLOCKABLE()) {
+		struct sdos_info *sdos;
+		sdos = (struct sdos_info *)sd->sdos_info;
+		/* Wait for the indication, the interrupt will be masked when the ISR fires. */
+		wait_event_interruptible(sdos->intr_wait_queue, (sd->got_hcint));
+	} else
+#endif /* BCMSDYIELD */
+	{
+		spi_spinbits(sd);
+	}
+
+}
+#else /* !BCMSPI_ANDROID */
 int bcmgspi_dump = 0;		/* Set to dump complete trace of all SPI bus transactions */
 
 static void
@@ -258,15 +396,15 @@ spi_sendrecv(sdioh_info_t *sd, uint8 *msg_out, uint8 *msg_in, int msglen)
 
 	if (sd->wordlen == 2)
 #if !(defined(SPI_PIO_RW_BIGENDIAN) && defined(SPI_PIO_32BIT_RW))
-		write = msg_out[2] & 0x80;	/* XXX bit 7: read:0, write :1 */
+		write = msg_out[2] & 0x80;
 #else
-		write = msg_out[1] & 0x80;	/* XXX bit 7: read:0, write :1 */
+		write = msg_out[1] & 0x80;
 #endif /* !(defined(SPI_PIO_RW_BIGENDIAN) && defined(SPI_PIO_32BIT_RW)) */
 	if (sd->wordlen == 4)
 #if !(defined(SPI_PIO_RW_BIGENDIAN) && defined(SPI_PIO_32BIT_RW))
-		write = msg_out[0] & 0x80;	/* XXX bit 7: read:0, write :1 */
+		write = msg_out[0] & 0x80;
 #else
-		write = msg_out[3] & 0x80;	/* XXX bit 7: read:0, write :1 */
+		write = msg_out[3] & 0x80;
 #endif /* !(defined(SPI_PIO_RW_BIGENDIAN) && defined(SPI_PIO_32BIT_RW)) */
 
 	if (bcmgspi_dump) {
@@ -296,3 +434,4 @@ spi_sendrecv(sdioh_info_t *sd, uint8 *msg_out, uint8 *msg_in, int msglen)
 		hexdump(" IN  : ", msg_in, msglen);
 	}
 }
+#endif /* !BCMSPI_ANDROID */

@@ -1,7 +1,7 @@
 /*
  * Linux cfgp2p driver
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wl_cfgp2p.h 794110 2018-12-12 05:03:21Z $
  */
 #ifndef _wl_cfgp2p_h_
 #define _wl_cfgp2p_h_
@@ -27,7 +33,6 @@
 
 struct bcm_cfg80211;
 extern u32 wl_dbg_level;
-extern u32 wl_log_level;
 
 typedef struct wifi_p2p_ie wifi_wfd_ie_t;
 /* Enumeration of the usages of the BSSCFGs used by the P2P Library.  Do not
@@ -126,102 +131,96 @@ enum wl_cfgp2p_status {
 #define p2p_scan(cfg) ((cfg)->p2p->scan)
 #define p2p_is_on(cfg) ((cfg)->p2p && (cfg)->p2p->on)
 
-#if defined(CUSTOMER_DBG_PREFIX_ENABLE)
-#define USER_PREFIX_CFGP2P		"[cfgp2p][wlan] "
-#define CFGP2P_ERROR_TEXT		USER_PREFIX_CFGP2P
-#define CFGP2P_INFO_TEXT		USER_PREFIX_CFGP2P
-#define CFGP2P_ACTION_TEXT		USER_PREFIX_CFGP2P
-#define CFGP2P_DEBUG_TEXT		USER_PREFIX_CFGP2P
-#else
-#ifdef CUSTOMER_HW4_DEBUG
-#define CFGP2P_ERROR_TEXT		"CFGP2P-INFO2) "
-#else
-#define CFGP2P_ERROR_TEXT		"CFGP2P-ERROR) "
-#endif /* CUSTOMER_HW4_DEBUG */
-#define CFGP2P_INFO_TEXT		"CFGP2P-INFO) "
-#define CFGP2P_ACTION_TEXT		"CFGP2P-ACTION) "
-#define CFGP2P_DEBUG_TEXT		"CFGP2P-DEBUG) "
-#endif /* defined(CUSTOMER_DBG_PREFIX_ENABLE) */
+/* dword align allocation */
+#define WLC_IOCTL_MAXLEN 8192
+
+#define CFGP2P_ERROR_TEXT		DHD_LOG_PREFIXS "CFGP2P-ERROR) "
 
 #ifdef DHD_LOG_DUMP
-#define CFGP2P_ERR(args)						\
-	do {								\
-		if (wl_dbg_level & WL_DBG_ERR) {			\
-			WL_DBG_PRINT_SYSTEM_TIME;			\
-			pr_cont(CFGP2P_ERROR_TEXT "%s : ", __func__);	\
-			pr_cont args;					\
-		}							\
-		if (wl_log_level & WL_DBG_ERR) {			\
-			DHD_LOG_DUMP_WRITE_TS_FN;			\
-			DHD_LOG_DUMP_WRITE args;			\
-		}							\
+#define	CFGP2P_ERR_MSG(x, args...)	\
+	do {	\
+		if (wl_dbg_level & WL_DBG_ERR) {	\
+			printk(KERN_INFO CFGP2P_ERROR_TEXT "%s : " x, __func__, ## args);	\
+			DHD_LOG_DUMP_WRITE("[%s] %s: ", dhd_log_dump_get_timestamp(), __func__);	\
+			DHD_LOG_DUMP_WRITE(x, ## args);	\
+		}	\
 	} while (0)
-#define CFGP2P_INFO(args)						\
-	do {								\
-		if (wl_dbg_level & WL_DBG_INFO) {			\
-			WL_DBG_PRINT_SYSTEM_TIME;			\
-			pr_cont(CFGP2P_INFO_TEXT "%s : ", __func__);	\
-			pr_cont args;					\
-		}							\
-		if (wl_log_level & WL_DBG_INFO) {			\
-			DHD_LOG_DUMP_WRITE_TS_FN;			\
-			DHD_LOG_DUMP_WRITE args;			\
-		}							\
-	} while (0)
-#define CFGP2P_ACTION(args)						\
-	do {								\
-		if (wl_dbg_level & WL_DBG_P2P_ACTION) {			\
-			WL_DBG_PRINT_SYSTEM_TIME;			\
-			pr_cont(CFGP2P_ACTION_TEXT "%s :", __func__);	\
-			pr_cont args;					\
-		}							\
-		if (wl_log_level & WL_DBG_P2P_ACTION) {			\
-			DHD_LOG_DUMP_WRITE_TS_FN;			\
-			DHD_LOG_DUMP_WRITE args;			\
-		}							\
-	} while (0)
-#else
-#define CFGP2P_ERR(args)									\
-	do {										\
-		if (wl_dbg_level & WL_DBG_ERR) {				\
-			WL_DBG_PRINT_SYSTEM_TIME;				\
-			pr_cont(CFGP2P_ERROR_TEXT "%s : ", __func__);	\
-			pr_cont args;					\
-		}									\
-	} while (0)
-#define	CFGP2P_INFO(args)									\
+#define CFGP2P_ERR(x) CFGP2P_ERR_MSG x
+#define	CFGP2P_INFO_MSG(x, args...)									\
 	do {										\
 		if (wl_dbg_level & WL_DBG_INFO) {				\
-			WL_DBG_PRINT_SYSTEM_TIME;				\
-			pr_cont(CFGP2P_INFO_TEXT "%s : ", __func__);	\
-			pr_cont args;					\
+			printk(KERN_INFO DHD_LOG_PREFIXS "CFGP2P-INFO) %s : " x, __func__, ## args);	\
+			DHD_LOG_DUMP_WRITE("[%s] %s: ", dhd_log_dump_get_timestamp(), __func__);	\
+			DHD_LOG_DUMP_WRITE(x, ## args);	\
 		}									\
 	} while (0)
-#define	CFGP2P_ACTION(args)								\
+#define CFGP2P_INFO(x) CFGP2P_INFO_MSG x
+#define	CFGP2P_ACTION_MSG(x, args...)								\
 	do {									\
 		if (wl_dbg_level & WL_DBG_P2P_ACTION) {			\
-			WL_DBG_PRINT_SYSTEM_TIME;				\
-			pr_cont(CFGP2P_ACTION_TEXT "%s :", __func__);	\
-			pr_cont args;					\
+			printk(KERN_INFO DHD_LOG_PREFIXS "CFGP2P-ACTION) %s :" x, __func__, ## args);	\
+			DHD_LOG_DUMP_WRITE("[%s] %s: ", dhd_log_dump_get_timestamp(), __func__);	\
+			DHD_LOG_DUMP_WRITE(x, ## args);	\
 		}									\
 	} while (0)
+#define CFGP2P_ACTION(x) CFGP2P_ACTION_MSG x
+#else
+#define CFGP2P_ERR_MSG(x, args...)									\
+	do {										\
+		if (wl_dbg_level & WL_DBG_ERR) {				\
+			printk(KERN_INFO CFGP2P_ERROR_TEXT "%s : " x, __func__, ## args);	\
+		}									\
+	} while (0)
+#define CFGP2P_ERR(x) CFGP2P_ERR_MSG x
+#define	CFGP2P_INFO_MSG(x, args...)									\
+	do {										\
+		if (wl_dbg_level & WL_DBG_INFO) {				\
+			printk(KERN_INFO DHD_LOG_PREFIXS "CFGP2P-INFO) %s : " x, __func__, ## args);	\
+		}									\
+	} while (0)
+#define CFGP2P_INFO(x) CFGP2P_INFO_MSG x
+#define	CFGP2P_ACTION_MSG(x, args...)								\
+	do {									\
+		if (wl_dbg_level & WL_DBG_P2P_ACTION) {			\
+			printk(KERN_INFO DHD_LOG_PREFIXS "CFGP2P-ACTION) %s :" x, __func__, ## args);	\
+		}									\
+	} while (0)
+#define CFGP2P_ACTION(x) CFGP2P_ACTION_MSG x
 #endif /* DHD_LOG_DUMP */
 
-#define	CFGP2P_DBG(args)								\
+#define	CFGP2P_DBG_MSG(x, args...)								\
 	do {									\
 		if (wl_dbg_level & WL_DBG_DBG) {			\
-			WL_DBG_PRINT_SYSTEM_TIME;				\
-			pr_cont(CFGP2P_DEBUG_TEXT "%s :", __func__);	\
-			pr_cont args;					\
+			printk(KERN_INFO DHD_LOG_PREFIXS "CFGP2P-DEBUG) %s :" x, __func__, ## args);	\
 		}									\
 	} while (0)
+#define CFGP2P_DBG(x) CFGP2P_DBG_MSG x
+
+#define INIT_TIMER(timer, func, duration, extra_delay)	\
+	do {				   \
+		init_timer_compat(timer, func, cfg); \
+		timer_expires(timer) = jiffies + msecs_to_jiffies(duration + extra_delay); \
+		add_timer(timer); \
+	} while (0);
+
+#if (LINUX_VERSION_CODE <= KERNEL_VERSION(3, 0, 8))
+#ifdef WL_SUPPORT_BACKPORTED_KPATCHES
+#undef WL_SUPPORT_BACKPORTED_KPATCHES
+#endif
+#endif
+
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 2, 0))
+#ifdef WL_CFG80211_STA_EVENT
+#undef WL_CFG80211_STA_EVENT
+#endif
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)) && !defined(WL_CFG80211_P2P_DEV_IF)
 #define WL_CFG80211_P2P_DEV_IF
 
 #ifdef WL_SUPPORT_BACKPORTED_KPATCHES
 #undef WL_SUPPORT_BACKPORTED_KPATCHES
-#endif
+#endif // endif
 #else
 #ifdef WLP2P
 /* Enable P2P network Interface if P2P support is enabled */
@@ -230,14 +229,17 @@ enum wl_cfgp2p_status {
 #endif /* (LINUX_VERSION >= VERSION(3, 8, 0)) */
 
 #ifndef WL_CFG80211_P2P_DEV_IF
-#ifdef WL_NEWCFG_PRIVCMD_SUPPORT
-#undef WL_NEWCFG_PRIVCMD_SUPPORT
-#endif
 #endif /* WL_CFG80211_P2P_DEV_IF */
 
-#if !defined(WLP2P) && defined(WL_CFG80211_P2P_DEV_IF)
+#if defined(WL_ENABLE_P2P_IF) && (defined(WL_CFG80211_P2P_DEV_IF) || \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(3, 8, 0)))
+#error Disable 'WL_ENABLE_P2P_IF', if 'WL_CFG80211_P2P_DEV_IF' is enabled \
+	or kernel version is 3.8.0 or above
+#endif /* WL_ENABLE_P2P_IF && (WL_CFG80211_P2P_DEV_IF || (LINUX_VERSION >= VERSION(3, 8, 0))) */
+
+#if !defined(WLP2P) && (defined(WL_ENABLE_P2P_IF) || defined(WL_CFG80211_P2P_DEV_IF))
 #error WLP2P not defined
-#endif
+#endif /* !WLP2P && (WL_ENABLE_P2P_IF || WL_CFG80211_P2P_DEV_IF) */
 
 #if defined(WL_CFG80211_P2P_DEV_IF)
 #define bcm_struct_cfgdev	struct wireless_dev
@@ -245,10 +247,6 @@ enum wl_cfgp2p_status {
 #define bcm_struct_cfgdev	struct net_device
 #endif /* WL_CFG80211_P2P_DEV_IF */
 
-/* If we take 10 or 30 as count value, operation
- * may failed due to full scan and noisy environments.
- * So, we choose 50 as the optimum value for P2P ECSA.
- */
 #define P2P_ECSA_CNT 50
 
 extern void
@@ -259,6 +257,8 @@ extern bool
 wl_cfgp2p_is_p2p_action(void *frame, u32 frame_len);
 extern bool
 wl_cfgp2p_is_gas_action(void *frame, u32 frame_len);
+extern bool
+wl_cfgp2p_find_gas_subtype(u8 subtype, u8* data, u32 len);
 extern bool
 wl_cfgp2p_is_p2p_gas_action(void *frame, u32 frame_len);
 extern void
@@ -339,11 +339,11 @@ wl_cfgp2p_action_tx_complete(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev
 	const wl_event_msg_t *e, void *data);
 
 extern s32
-wl_cfgp2p_tx_action_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
-	struct net_device *dev, wl_af_params_v1_t *af_params, s32 bssidx, const u8 *sa);
+wl_cfgp2p_tx_action_frame(struct bcm_cfg80211 *cfg, struct net_device *dev,
+	wl_af_params_t *af_params, s32 bssidx);
 
 extern void
-wl_cfgp2p_generate_bss_mac(struct bcm_cfg80211 *cfg);
+wl_cfgp2p_generate_bss_mac(struct bcm_cfg80211 *cfg, struct ether_addr *primary_addr);
 
 extern void
 wl_cfg80211_change_ifaddr(u8* buf, struct ether_addr *p2p_int_addr, u8 element_id);
@@ -376,7 +376,7 @@ extern const u8*
 wl_cfgp2p_find_attrib_in_all_p2p_Ies(const u8 *parse, u32 len, u32 attrib);
 
 extern const u8 *
-wl_cfgp2p_retreive_p2p_dev_addr(wl_bss_info_v109_t *bi, u32 bi_length);
+wl_cfgp2p_retreive_p2p_dev_addr(wl_bss_info_t *bi, u32 bi_length);
 
 extern s32
 wl_cfgp2p_register_ndev(struct bcm_cfg80211 *cfg);
@@ -420,9 +420,6 @@ wl_cfgp2p_need_wait_actfrmae(struct bcm_cfg80211 *cfg, void *frame, u32 frame_le
 extern int
 wl_cfgp2p_is_p2p_specific_scan(struct cfg80211_scan_request *request);
 
-extern s32
-wl_cfg80211_abort_action_frame(struct bcm_cfg80211 *cfg, struct net_device *dev, s32 bssidx);
-
 /* WiFi Direct */
 #define SOCIAL_CHAN_1 1
 #define SOCIAL_CHAN_2 6
@@ -456,10 +453,5 @@ wl_cfg80211_abort_action_frame(struct bcm_cfg80211 *cfg, struct net_device *dev,
 							(subtype == P2P_PAF_PROVDIS_RSP)))
 #define IS_P2P_SOCIAL(ch) ((ch == SOCIAL_CHAN_1) || (ch == SOCIAL_CHAN_2) || (ch == SOCIAL_CHAN_3))
 #define IS_P2P_SSID(ssid, len) (!memcmp(ssid, WL_P2P_WILDCARD_SSID, WL_P2P_WILDCARD_SSID_LEN) && \
-					(len >= WL_P2P_WILDCARD_SSID_LEN))
-
-/* Min FW ver required to support chanspec
- * instead of channel in actframe iovar.
- */
-#define FW_MAJOR_VER_ACTFRAME_CHSPEC    14
+					(len == WL_P2P_WILDCARD_SSID_LEN))
 #endif				/* _wl_cfgp2p_h_ */

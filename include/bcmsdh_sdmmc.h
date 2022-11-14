@@ -1,7 +1,7 @@
 /*
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,39 +17,33 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Proprietary,Open:>>
+ *
+ * $Id: bcmsdh_sdmmc.h 753315 2018-03-21 04:10:12Z $
  */
 
 #ifndef __BCMSDH_SDMMC_H__
 #define __BCMSDH_SDMMC_H__
 
-#ifdef BCMDBG
 #define sd_err(x)	do { if (sd_msglevel & SDH_ERROR_VAL) printf x; } while (0)
 #define sd_trace(x)	do { if (sd_msglevel & SDH_TRACE_VAL) printf x; } while (0)
-#define sd_info(x)	do { if (sd_msglevel & SDH_INFO_VAL)  printf x; } while (0)
+#define sd_info(x)	do { if (sd_msglevel & SDH_INFO_VAL) printf x; } while (0)
 #define sd_debug(x)	do { if (sd_msglevel & SDH_DEBUG_VAL) printf x; } while (0)
-#define sd_data(x)	do { if (sd_msglevel & SDH_DATA_VAL)  printf x; } while (0)
-#define sd_ctrl(x)	do { if (sd_msglevel & SDH_CTRL_VAL)  printf x; } while (0)
-#else
-#define sd_err(x)	do { if (sd_msglevel & SDH_ERROR_VAL) printf x; } while (0)
-#define sd_trace(x)
-#define sd_info(x)
-#define sd_debug(x)
-#define sd_data(x)
-#define sd_ctrl(x)
-#endif
+#define sd_data(x)	do { if (sd_msglevel & SDH_DATA_VAL) printf x; } while (0)
+#define sd_ctrl(x)	do { if (sd_msglevel & SDH_CTRL_VAL) printf x; } while (0)
+#define sd_cost(x)	do { if (sd_msglevel & SDH_COST_VAL) printf x; } while (0)
 
 #define sd_sync_dma(sd, read, nbytes)
 #define sd_init_dma(sd)
 #define sd_ack_intr(sd)
 #define sd_wakeup(sd);
 
-#ifdef BCMPERFSTATS
-#define sd_log(x)	do { if (sd_msglevel & SDH_LOG_VAL)	 bcmlog x; } while (0)
-#else
 #define sd_log(x)
-#endif
 
 #define SDIOH_ASSERT(exp) \
 	do { if (!(exp)) \
@@ -92,6 +86,8 @@ struct sdioh_info {
 	struct sdio_func	fake_func0;
 	struct sdio_func	*func[SDIOD_MAX_IOFUNCS];
 	uint		sd_clk_rate;
+	uint	txglom_mode;		/* Txglom mode: 0 - copy, 1 - multi-descriptor */
+	uint32	sdio_spent_time_us;
 };
 
 /************************************************************
@@ -122,4 +118,12 @@ extern void sdioh_sdmmc_free_irq(uint irq, sdioh_info_t *sd);
 
 extern sdioh_info_t *sdioh_attach(osl_t *osh, struct sdio_func *func);
 extern SDIOH_API_RC sdioh_detach(osl_t *osh, sdioh_info_t *sd);
+
+#ifdef GLOBAL_SDMMC_INSTANCE
+typedef struct _BCMSDH_SDMMC_INSTANCE {
+	sdioh_info_t	*sd;
+	struct sdio_func *func[SDIOD_MAX_IOFUNCS];
+} BCMSDH_SDMMC_INSTANCE, *PBCMSDH_SDMMC_INSTANCE;
+#endif
+
 #endif /* __BCMSDH_SDMMC_H__ */

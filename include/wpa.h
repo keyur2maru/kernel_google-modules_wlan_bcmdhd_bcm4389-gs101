@@ -1,7 +1,7 @@
 /*
  * Fundamental types and constants relating to WPA
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wpa.h 822438 2019-05-29 17:13:44Z $
  */
 
 #ifndef _proto_wpa_h_
@@ -96,7 +102,7 @@ typedef BWL_PRE_PACKED_STRUCT struct
 		uint8 low;
 		uint8 high;
 	} BWL_POST_PACKED_STRUCT count;
-	wpa_suite_t list[BCM_FLEX_ARRAY];
+	wpa_suite_t list[1];
 } BWL_POST_PACKED_STRUCT wpa_suite_ucast_t, wpa_suite_auth_key_mgmt_t;
 #define WPA_IE_SUITE_COUNT_LEN	2
 typedef BWL_PRE_PACKED_STRUCT struct
@@ -105,7 +111,7 @@ typedef BWL_PRE_PACKED_STRUCT struct
 		uint8 low;
 		uint8 high;
 	} BWL_POST_PACKED_STRUCT count;
-	wpa_pmkid_t list[BCM_FLEX_ARRAY];
+	wpa_pmkid_t list[1];
 } BWL_POST_PACKED_STRUCT wpa_pmkid_list_t;
 
 /* WPA cipher suites */
@@ -129,7 +135,7 @@ typedef BWL_PRE_PACKED_STRUCT struct
 
 #define WPA_CIPHER_AES_GCM	8	/* AES (GCM) */
 #define WPA_CIPHER_AES_GCM256	9	/* AES (GCM256) */
-#define WPA_CIPHER_CCMP_256	10	/* CCMP-256 */
+#define WPA_CIPHER_CCMP_256 	10	/* CCMP-256 */
 #define WPA_CIPHER_BIP_GMAC_128	11	/* BIP_GMAC_128 */
 #define WPA_CIPHER_BIP_GMAC_256 12	/* BIP_GMAC_256 */
 #define WPA_CIPHER_BIP_CMAC_256 13	/* BIP_CMAC_256 */
@@ -153,9 +159,9 @@ typedef BWL_PRE_PACKED_STRUCT struct
 				 (cipher) == WPA_CIPHER_TPK)
 
 #define IS_WPA_BIP_CIPHER(cipher)  ((cipher) == WPA_CIPHER_BIP || \
-				    (cipher) == WPA_CIPHER_BIP_GMAC_128 || \
+			            (cipher) == WPA_CIPHER_BIP_GMAC_128 || \
 				    (cipher) == WPA_CIPHER_BIP_GMAC_256 || \
-				    (cipher) == WPA_CIPHER_BIP_CMAC_256)
+		                    (cipher) == WPA_CIPHER_BIP_CMAC_256)
 
 #ifdef BCMWAPI_WAI
 #define IS_WAPI_CIPHER(cipher)	((cipher) == WAPI_CIPHER_NONE || \
@@ -185,14 +191,12 @@ typedef BWL_PRE_PACKED_STRUCT struct
 			(akm) == RSN_AKM_FILS_SHA384 || \
 			(akm) == RSN_AKM_OWE || \
 			(akm) == RSN_AKM_SUITEB_SHA256_1X || \
-			(akm) == RSN_AKM_SUITEB_SHA384_1X || \
-			(akm) == RSN_AKM_PASN)
+			(akm) == RSN_AKM_SUITEB_SHA384_1X)
 
 #define IS_VALID_BIP_CIPHER(cipher) ((cipher) == WPA_CIPHER_BIP || \
 					(cipher) == WPA_CIPHER_BIP_GMAC_128 || \
 					(cipher) == WPA_CIPHER_BIP_GMAC_256 || \
-					(cipher) == WPA_CIPHER_BIP_CMAC_256 || \
-					(cipher) == WPA_CIPHER_TPK)
+					(cipher) == WPA_CIPHER_BIP_CMAC_256)
 
 #define WPA_IS_FT_AKM(akm)	((akm) == RSN_AKM_FBT_SHA256 || \
 			(akm) == RSN_AKM_FBT_SHA384)
@@ -225,7 +229,6 @@ typedef BWL_PRE_PACKED_STRUCT struct
 #define RSN_CAP_MFPC			0x0080
 #define RSN_CAP_SPPC			0x0400
 #define RSN_CAP_SPPR			0x0800
-#define RSN_CAP_OCVC			0x4000
 
 /* WPA capabilities defined in 802.11i */
 #define WPA_CAP_4_REPLAY_CNTRS		RSN_CAP_4_REPLAY_CNTRS
@@ -238,7 +241,7 @@ typedef BWL_PRE_PACKED_STRUCT struct
 
 /* WPA Specific defines */
 #define WPA_CAP_LEN	RSN_CAP_LEN	/* Length of RSN capabilities in RSN IE (2 octets) */
-#define WPA_PMKID_CNT_LEN	2	/* Length of RSN PMKID count (2 octests) */
+#define WPA_PMKID_CNT_LEN	2 	/* Length of RSN PMKID count (2 octests) */
 
 #define	WPA_CAP_WPA2_PREAUTH		RSN_CAP_PREAUTH
 
@@ -285,10 +288,6 @@ typedef struct rsn_ie_info {
 	uint8 ptk_len;				/* EAPOL PTK */
 	uint8 kck2_len;				/* EAPOL KCK2 */
 	uint8 kek2_len;				/* EAPOL KEK2 */
-	uint8 rsnxe_len;			/* RSNXE IE from assoc request */
-	uint8 *rsnxe;				/* RSNXE IE length */
-	uint8 kdk_len;				/* EAPOL KDK */
-	uint8 pad[3];
 } rsn_ie_info_t;
 #endif /* RSN_IE_INFO_STRUCT_RELOCATED */
 

@@ -1,7 +1,7 @@
 /*
  * EVENT_LOG system definitions
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: event_log_tag.h 820429 2019-05-17 22:30:04Z $
  */
 
 #ifndef _EVENT_LOG_TAG_H_
@@ -79,7 +85,6 @@
 #define EVENT_LOG_TAG_PCI_DBG	52
 #define EVENT_LOG_TAG_PCI_DATA  53
 #define EVENT_LOG_TAG_PCI_RING	54
-
 #define EVENT_LOG_TAG_RANGING_TRACE	55
 #define EVENT_LOG_TAG_WL_ERROR		56
 #define EVENT_LOG_TAG_PHY_ERROR		57
@@ -122,11 +127,9 @@
 #define EVENT_LOG_TAG_MIMO_PS_INFO	94
 #define EVENT_LOG_TAG_BTCX_STATS	95
 #define EVENT_LOG_TAG_LEAKY_AP_STATS	96
-
 #define EVENT_LOG_TAG_MIMO_PS_STATS	98
 #define EVENT_LOG_TAG_PWRSTATS_PHY	99
 #define EVENT_LOG_TAG_PWRSTATS_SCAN	100
-
 #define EVENT_LOG_TAG_PWRSTATS_WAKE_V2	102
 #define EVENT_LOG_TAG_LQM		103
 #define EVENT_LOG_TAG_TRACE_WL_INFO	104
@@ -181,11 +184,9 @@
 #define EVENT_LOG_TAG_STATS			153
 #define EVENT_LOG_TAG_BAM			154
 #define EVENT_LOG_TAG_TXFAIL			155
-
 #define EVENT_LOG_TAG_RANDMAC_INFO		159
 #define EVENT_LOG_TAG_RANDMAC_DBG		160
 #define EVENT_LOG_TAG_RANDMAC_ERR		161
-
 #define EVENT_LOG_TAG_MSCH_CAL			163
 #define EVENT_LOG_TAG_MSCH_OPP_CAL		164
 #define EVENT_LOG_TAG_MSCH			165
@@ -220,7 +221,6 @@
 #define EVENT_LOG_TAG_PHY_ACI_INFO		208
 #define EVENT_LOG_TAG_WL_COUNTERS_AUX		209
 #define EVENT_LOG_TAG_AMPDU_DUMP_AUX		210
-
 #define EVENT_LOG_TAG_PWRSTATS_PHY_AUX		212
 #define EVENT_LOG_TAG_PWRSTATS_SCAN_AUX		213
 #define EVENT_LOG_TAG_PWRSTATS_WAKE_V2_AUX	214
@@ -231,12 +231,12 @@
 #define EVENT_LOG_TAG_FILS_DBG			219
 #define EVENT_LOG_TAG_FILS_INFO			220
 #define EVENT_LOG_TAG_FILS_ERROR		221
-#define EVENT_LOG_TAG_BTCX_STATS_AUX		222
-#define EVENT_LOG_TAG_ROAM_TGT_EVAL		223
+#define EVENT_LOG_TAG_HWA_TXPOST		222
+#define EVENT_LOG_TAG_HWA_TXDMA			223
 #define EVENT_LOG_TAG_PPR_ERROR			224
 
 /* Arbitrator callback log tags */
-#define EVENT_LOG_TAG_STF_ARB_CB_TRACE		225	/* Intentional duplicated value as ERROR */
+#define EVENT_LOG_TAG_STF_ARB_CB_TRACE		224
 #define EVENT_LOG_TAG_STF_ARB_CB_ERROR		225
 #define EVENT_LOG_TAG_PHY_PERIODIC_SEC		226
 #define EVENT_LOG_TAG_RTE_ERROR			227
@@ -247,7 +247,6 @@
 #define EVENT_LOG_TAG_HP2P_ERR			232
 #define EVENT_LOG_TAG_SB_SCHED_DBG_SYNC		233
 #define EVENT_LOG_TAG_ENHANCED_TS		234
-#define EVENT_LOG_TAG_PHY_OBSS_INFO		235
 
 /* Available space for new tags for Dingo, Iguana and branches
  * prior to Koala only. From Koala onwards, new tags must be greater
@@ -352,8 +351,7 @@
 #define EVENT_LOG_TAG_WL_TDLS_ERR               317
 
 /* MSCH messages */
-#define EVENT_LOG_TAG_MSCH_DATASTRUCT		319 /* don't use, kept for backward compatibility */
-#define EVENT_LOG_TAG_MSCH_PROFILE		319
+#define EVENT_LOG_TAG_MSCH_DATASTRUCT		319
 #define EVENT_LOG_TAG_MSCH_REGISTER		320
 #define EVENT_LOG_TAG_MSCH_CALLBACK		321
 #define EVENT_LOG_TAG_MSCH_ERROR		322
@@ -398,181 +396,8 @@
 #define EVENT_LOG_TAG_BTCEC_INFO		341
 #define EVENT_LOG_TAG_BTCEC_SCHED		342
 
-#ifdef SLOT_SCHED
-#define EVENT_LOG_TAG_SBSS_HC		344
-#endif /* SLOT_SCHED */
-
-/* wlc_chan_cal */
-#define EVENT_LOG_TAG_WCC_ERR			345
-#define EVENT_LOG_TAG_WCC_INFO			346
-#define EVENT_LOG_TAG_WCC_TRACE			347
-
-/* AMT logging */
-#define EVENT_LOG_TAG_AMT_ERR			348
-#define EVENT_LOG_TAG_AMT_INFO			349
-#define EVENT_LOG_TAG_AMT_TRACE			350
-
-/* OBSS hw logging */
-#define EVENT_LOG_TAG_WLC_OBSS_ERR		351
-#define EVENT_LOG_TAG_WLC_OBSS_TRACE		352
-#define EVENT_LOG_TAG_WLC_OBSS_INFO		353
-
-#define EVENT_LOG_TAG_ALLOC_TRACE		354
-
-/* ASSOC and SUP state machine log tags */
-#define EVENT_LOG_TAG_ASSOC_SM			355
-#define EVENT_LOG_TAG_SUP_SM			356
-/* Place holders for additional state machine logging */
-#define EVENT_LOG_TAG_AUTH_SM			357
-#define EVENT_LOG_TAG_SAE_SM			358
-#define EVENT_LOG_TAG_FTM_SM			359
-#define EVENT_LOG_TAG_NAN_SM			360
-
-/* HP2P - RLLW logging */
-#define EVENT_LOG_TAG_RLLW_TRACE		361
-
-#define EVENT_LOG_TAG_SDTC_INFO			362
-#define EVENT_LOG_TAG_SDTC_ERR			363
-
-/* KEEPALIVE logging */
-#define EVENT_LOG_TAG_KEEPALIVE			364
-#define EVENT_LOG_TAG_DTIM_SCHED_LOG		365
-
-/* For printing PHY init time in the event logs for both slices. */
-#define EVENT_LOG_TAG_PHY_INIT_TM		366
-
-/* SensorC Coex logging */
-#define EVENT_LOG_TAG_SSCCX_ERR			367
-#define EVENT_LOG_TAG_SSCCX_INFO		368
-#define EVENT_LOG_TAG_SSCCX_TRACE		369
-/* TAG for channel info */
-#define EVENT_LOG_TAG_SCAN_CHANNEL_INFO		370
-/* Robust Audio Video (RAV) - Mirrored Stream Classification Service (MSCS) */
-#define EVENT_LOG_TAG_RAV_MSCS_ERROR		371
-#define EVENT_LOG_TAG_RAV_MSCS_INFO		372
-
-/* DVFS state machine related tag */
-#define EVENT_LOG_TAG_DVFS_SM			373
-
-/* IPL info */
-#define EVENT_LOG_TAG_IPL_INFO			374
-
-/* bcmtrace */
-#define EVENT_LOG_TAG_BCM_TRACE			375
-
-/* noise cal */
-#define EVENT_LOG_TAG_NOISE_CAL			376
-
-/* FTM hw */
-#define EVENT_LOG_TAG_FTM_HW_ERR		377
-#define EVENT_LOG_TAG_FTM_HW_INFO		378
-#define EVENT_LOG_TAG_FTM_HW_TRACE		379
-
-#define EVENT_LOG_TAG_NOISE_CAL_DBG		380
-
-/* EHT EVEVNT_LOG_TAG */
-#define EVENT_LOG_TAG_WL_EHT_INFO		381
-#define EVENT_LOG_TAG_WL_EHT_TRACE		382
-#define EVENT_LOG_TAG_WL_EHT_WARN		383
-#define EVENT_LOG_TAG_WL_EHT_ERROR		384
-
-#define EVENT_LOG_TAG_CHNCTX_INFO		385
-#define EVENT_LOG_TAG_CHNCTX_ERROR		386
-#define EVENT_LOG_TAG_ECOUNTERS_INFORM		387
-#define EVENT_LOG_TAG_STA_SC_OFLD_ERR		388
-
-#define EVENT_LOG_TAG_PKTFLTR_INFO		389
-#define EVENT_LOG_TAG_PKTFLTR_TRACE		390
-#define EVENT_LOG_TAG_PKTFLTR_WARN		391
-#define EVENT_LOG_TAG_PKTFLTR_ERROR		392
-
-/* LLW */
-#define EVENT_LOG_TAG_LLW_ERR			393
-#define EVENT_LOG_TAG_LLW_INFO			394
-
-#define	EVENT_LOG_TAG_SPMI_INFO			395
-#define	EVENT_LOG_TAG_SPMI_ERROR		396
-#define	EVENT_LOG_TAG_SPMI_TRACE		397
-
-#define EVENT_LOG_TAG_PROXD_DBG			400
-#define EVENT_LOG_TAG_RXOVFL			401
-
-/* MLO EVEVNT_LOG_TAG */
-#define EVENT_LOG_TAG_WL_MLO_INFO		402
-#define EVENT_LOG_TAG_WL_MLO_TRACE		403
-#define EVENT_LOG_TAG_WL_MLO_WARN		404
-#define EVENT_LOG_TAG_WL_MLO_ERROR		405
-#define EVENT_LOG_TAG_RX_DEAFNESS_DBG		406	/* Used with triggered log events */
-
-/* BCMSM event log tags */
-#define EVENT_LOG_TAG_BCMSM_ERROR		407
-#define EVENT_LOG_TAG_BCMSM_INFO		408
-#define EVENT_LOG_TAG_BCMSM_TRACE		409
-
-/* EWP HW event log tags */
-#define EVENT_LOG_TAG_EWP_HW			410
-
-#define EVENT_LOG_TAG_COEXCPU_ERROR		413
-
-#ifdef CHRE
-#define EVENT_LOG_TAG_CHRE_ERR                  414
-#define EVENT_LOG_TAG_CHRE_WARN                 415
-#define EVENT_LOG_TAG_CHRE_INFO                 416
-#define EVENT_LOG_TAG_CHRE_DBG                  417
-#endif /* CHRE */
-
-/* QoS and SCS (Stream Classification Service) */
-#define EVENT_LOG_TAG_RAV_QOS_ERROR		418
-#define EVENT_LOG_TAG_RAV_QOS_INFO		419
-
-#define EVENT_LOG_TAG_RAV_SCS_ERROR		420
-#define EVENT_LOG_TAG_RAV_SCS_INFO		421
-
-#define EVENT_LOG_TAG_AMPDU_BARDBG              422
-
-#define EVENT_LOG_TAG_PASN_ERROR		423
-#define EVENT_LOG_TAG_PASN_INFO			424
-
-#define EVENT_LOG_TAG_IGMP_DBG			425
-#define EVENT_LOG_TAG_IGMP_INFO			426
-#define EVENT_LOG_TAG_IGMP_ERR			427
-
-#define EVENT_LOG_TAG_DNGL_CAPEXT_ERROR		428
-#define EVENT_LOG_TAG_DVFS_INFO			429
-#define EVENT_LOG_TAG_DVFS_ERROR		430
-
-#define EVENT_LOG_TAG_BTCX_ERR			431
-#define EVENT_LOG_TAG_BTCX_INFO			432
-#define EVENT_LOG_TAG_BTCX_TRACE		433
-
-#define EVENT_LOG_TAG_BCMHAL_SOCI_NCI_ERROR	434
-#define EVENT_LOG_TAG_BCMHAL_SOCI_NCI_TRACE	435
-#define EVENT_LOG_TAG_BCMHAL_SOCI_NCI_INFO	436
-#define EVENT_LOG_TAG_WL_TOSS			437
-
-/* 6GHz Client-to-Client (C2C) logging */
-#define EVENT_LOG_TAG_C2C_ERROR			438
-#define EVENT_LOG_TAG_C2C_DBG			439
-
-#define EVENT_LOG_TAG_OCT_INFO			440
-
-#define EVENT_LOG_TAG_PHY_AZ_INFO		441
-#define EVENT_LOG_TAG_PHY_AZ_INFO_DBG		442
-#define EVENT_LOG_TAG_PHY_AZ_INFO_CSI		443
-
-#define EVENT_LOG_TAG_WL_RATE_ERR		444
-
-#define EVENT_LOG_TAG_6GCHANPROF_ERROR		445
-#define EVENT_LOG_TAG_6GCHANPROF_INFO		446
-#define EVENT_LOG_TAG_6GCHANPROF_TRACE		447
-
-/* OWE STUFF */
-#define EVENT_LOG_TAG_OWE_DBG			448
-#define EVENT_LOG_TAG_OWE_INFO			449
-#define EVENT_LOG_TAG_OWE_ERR			450
-
 /* EVENT_LOG_TAG_MAX	= Set to the same value of last tag, not last tag + 1 */
-#define EVENT_LOG_TAG_MAX			450
+#define EVENT_LOG_TAG_MAX			342
 
 typedef enum wl_el_set_type_def {
 	EVENT_LOG_SET_TYPE_DEFAULT = 0, /* flush the log buffer when it is full - Default option */
@@ -645,8 +470,7 @@ typedef union event_log_extended_hdr {
 	struct {
 		uint8 extended_tag; /* Extended tag, bits[7..4] are reserved */
 		uint8 extended_count; /* Extended count. Reserved for now. */
-		uint8 extended_fmtnum;	/* bits[3..0] used. Rest reserved */
-		uint8 rsvd;	/* Reserved */
+		uint16 rsvd;	/* Reserved */
 	};
 
 	uint32 t;	/* Type cheat */

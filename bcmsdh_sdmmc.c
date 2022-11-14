@@ -1,7 +1,7 @@
 /*
  * BCMSDH Function Driver for the native SDIO/MMC driver in the Linux Kernel
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,10 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id$
+ * <<Broadcom-WL-IPTag/Proprietary,Open:>>
+ *
+ * $Id: bcmsdh_sdmmc.c 782528 2018-09-28 12:15:40Z $
  */
 #include <typedefs.h>
 
@@ -50,7 +54,7 @@
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
 #include <linux/suspend.h>
 extern volatile bool dhd_mmc_suspend;
-#endif
+#endif // endif
 #include "bcmsdh_sdmmc.h"
 
 #if (LINUX_VERSION_CODE <= KERNEL_VERSION(3, 0, 0)) || (LINUX_VERSION_CODE >= \
@@ -86,17 +90,22 @@ static void IRQHandler(struct sdio_func *func);
 static void IRQHandlerF2(struct sdio_func *func);
 #endif /* !defined(OOB_INTR_ONLY) */
 static int sdioh_sdmmc_get_cisaddr(sdioh_info_t *sd, uint32 regaddr);
+//#if defined(ENABLE_INSMOD_NO_FW_LOAD) && !defined(BUS_POWER_RESTORE)
 extern int sdio_reset_comm(struct mmc_card *card);
+//#endif
+#ifdef GLOBAL_SDMMC_INSTANCE
+extern PBCMSDH_SDMMC_INSTANCE gInstance;
+#endif
 
 #define DEFAULT_SDIO_F2_BLKSIZE		512
 #ifndef CUSTOM_SDIO_F2_BLKSIZE
 #define CUSTOM_SDIO_F2_BLKSIZE		DEFAULT_SDIO_F2_BLKSIZE
-#endif
+#endif // endif
 
 #define DEFAULT_SDIO_F1_BLKSIZE		64
 #ifndef CUSTOM_SDIO_F1_BLKSIZE
 #define CUSTOM_SDIO_F1_BLKSIZE		DEFAULT_SDIO_F1_BLKSIZE
-#endif
+#endif // endif
 
 #define MAX_IO_RW_EXTENDED_BLK		511
 
@@ -118,7 +127,7 @@ uint sd_use_dma = TRUE;
 
 #ifndef CUSTOM_RXCHAIN
 #define CUSTOM_RXCHAIN 0
-#endif
+#endif // endif
 
 DHD_PM_RESUME_WAIT_INIT(sdioh_request_byte_wait);
 DHD_PM_RESUME_WAIT_INIT(sdioh_request_word_wait);
@@ -129,10 +138,6 @@ DHD_PM_RESUME_WAIT_INIT(sdioh_request_buffer_wait);
 #define MMC_SDIO_ABORT_RETRY_LIMIT 5
 
 int sdioh_sdmmc_card_regread(sdioh_info_t *sd, int func, uint32 regaddr, int regsize, uint32 *data);
-#ifdef NOTYET
-static int
-sdioh_sdmmc_card_regwrite(sdioh_info_t *sd, int func, uint32 regaddr, int regsize, uint32 data);
-#endif /* NOTYET */
 
 #if defined(BT_OVER_SDIO)
 extern
@@ -177,7 +182,7 @@ sdioh_sdmmc_card_enablefuncs(sdioh_info_t *sd)
 	err_ret = sdio_enable_func(sd->func[1]);
 	sdio_release_host(sd->func[1]);
 	if (err_ret) {
-		sd_err(("bcmsdh_sdmmc: Failed to enable F1 Err: 0x%08x", err_ret));
+		sd_err(("bcmsdh_sdmmc: Failed to enable F1 Err: 0x%08x\n", err_ret));
 	}
 
 	return FALSE;
@@ -208,8 +213,16 @@ sdioh_attach(osl_t *osh, struct sdio_func *func)
 	sd->fake_func0.num = 0;
 	sd->fake_func0.card = func->card;
 	sd->func[0] = &sd->fake_func0;
+#ifdef GLOBAL_SDMMC_INSTANCE
+	if (func->num == 2)
+		sd->func[1] = gInstance->func[1];
+#else
 	sd->func[1] = func->card->sdio_func[0];
+#endif
 	sd->func[2] = func->card->sdio_func[1];
+#ifdef GLOBAL_SDMMC_INSTANCE
+	sd->func[func->num] = func;
+#endif
 
 #if defined(BT_OVER_SDIO)
 	sd->func[3] = NULL;
@@ -237,6 +250,7 @@ sdioh_attach(osl_t *osh, struct sdio_func *func)
 
 	sdio_claim_host(sd->func[2]);
 	sd->client_block_size[2] = sd_f2_blocksize;
+	printf("%s: set sd_f2_blocksize %d\n", __FUNCTION__, sd_f2_blocksize);
 	err_ret = sdio_set_block_size(sd->func[2], sd_f2_blocksize);
 	sdio_release_host(sd->func[2]);
 	if (err_ret) {
@@ -246,7 +260,7 @@ sdioh_attach(osl_t *osh, struct sdio_func *func)
 	}
 
 	sd->sd_clk_rate = sdmmc_get_clock_rate(sd);
-	DHD_ERROR(("%s: sd clock rate = %u\n", __FUNCTION__, sd->sd_clk_rate));
+	printf("%s: sd clock rate = %u\n", __FUNCTION__, sd->sd_clk_rate);
 	sdioh_sdmmc_card_enablefuncs(sd);
 
 	sd_trace(("%s: Done\n", __FUNCTION__));
@@ -344,7 +358,7 @@ sdioh_disable_func_intr(sdioh_info_t *sd)
 	reg &= ~(INTR_CTL_FUNC1_EN | INTR_CTL_FUNC2_EN);
 #if defined(BT_OVER_SDIO)
 	reg &= ~INTR_CTL_FUNC3_EN;
-#endif
+#endif // endif
 	/* Disable master interrupt with the last function interrupt */
 	if (!(reg & 0xFE))
 		reg = 0;
@@ -418,7 +432,8 @@ sdioh_interrupt_deregister(sdioh_info_t *sd)
 	sd->intr_handler = NULL;
 	sd->intr_handler_arg = NULL;
 #elif defined(HW_OOB)
-	sdioh_disable_func_intr(sd);
+	if (dhd_download_fw_on_driverload)
+		sdioh_disable_func_intr(sd);
 #endif /* !defined(OOB_INTR_ONLY) */
 	return SDIOH_API_RC_SUCCESS;
 }
@@ -431,13 +446,13 @@ sdioh_interrupt_query(sdioh_info_t *sd, bool *onoff)
 	return SDIOH_API_RC_SUCCESS;
 }
 
-#if defined(DHD_DEBUG) || defined(BCMDBG)
+#if defined(DHD_DEBUG)
 extern bool
 sdioh_interrupt_pending(sdioh_info_t *sd)
 {
 	return (0);
 }
-#endif
+#endif // endif
 
 uint
 sdioh_query_iofnum(sdioh_info_t *sd)
@@ -479,24 +494,22 @@ const bcm_iovar_t sdioh_iovars[] = {
 	{"sd_mode",	IOV_SDMODE,	0, 0,	IOVT_UINT32,	100},
 	{"sd_highspeed", IOV_HISPEED,	0, 0,	IOVT_UINT32,	0 },
 	{"sd_rxchain",  IOV_RXCHAIN,    0, 0, 	IOVT_BOOL,	0 },
-#ifdef BCMDBG
-	{"sd_hciregs",	IOV_HCIREGS,	0, 0,	IOVT_BUFFER,	0 },
-#endif
 	{NULL, 0, 0, 0, 0, 0 }
 };
 
 int
 sdioh_iovar_op(sdioh_info_t *si, const char *name,
-                           void *params, int plen, void *arg, uint len, bool set)
+                           void *params, int plen, void *arg, int len, bool set)
 {
 	const bcm_iovar_t *vi = NULL;
 	int bcmerror = 0;
-	uint val_size;
+	int val_size;
 	int32 int_val = 0;
 	bool bool_val;
 	uint32 actionid;
 
 	ASSERT(name);
+	ASSERT(len >= 0);
 
 	/* Get must have return space; Set does not take qualifiers */
 	ASSERT(set || (arg && len));
@@ -512,7 +525,6 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 	if ((bcmerror = bcm_iovar_lencheck(vi, arg, len, set)) != 0)
 		goto exit;
 
-	/* XXX Copied from dhd, copied from wl; certainly overkill here? */
 	/* Set up params so get and set can share the convenience variables */
 	if (params == NULL) {
 		params = arg;
@@ -573,7 +585,6 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 			break;
 		}
 
-		/* XXX These hardcoded sizes are a hack, remove after proper CIS parsing. */
 		switch (func) {
 		case 0: maxsize = 32; break;
 		case 1: maxsize = BLOCK_SIZE_4318; break;
@@ -702,14 +713,10 @@ sdioh_iovar_op(sdioh_info_t *si, const char *name,
 	}
 exit:
 
-	/* XXX Remove protective lock after clients all clean... */
 	return bcmerror;
 }
 
-#if defined(OOB_INTR_ONLY) && defined(HW_OOB)
-/*
- * XXX dhd -i eth0 sd_devreg 0 0xf2 0x3
- */
+#if (defined(OOB_INTR_ONLY) && defined(HW_OOB)) || defined(FORCE_WOWLAN)
 
 SDIOH_API_RC
 sdioh_enable_hw_oob_intr(sdioh_info_t *sd, bool enable)
@@ -718,7 +725,11 @@ sdioh_enable_hw_oob_intr(sdioh_info_t *sd, bool enable)
 	uint8 data;
 
 	if (enable)
+#ifdef HW_OOB_LOW_LEVEL
+		data = SDIO_SEPINT_MASK | SDIO_SEPINT_OE;
+#else
 		data = SDIO_SEPINT_MASK | SDIO_SEPINT_OE | SDIO_SEPINT_ACT_HI;
+#endif
 	else
 		data = SDIO_SEPINT_ACT_HI;	/* disable hw oob interrupt */
 
@@ -799,12 +810,40 @@ sdioh_cis_read(sdioh_info_t *sd, uint func, uint8 *cisd, uint32 length)
 }
 
 extern SDIOH_API_RC
+sdioh_cisaddr_read(sdioh_info_t *sd, uint func, uint8 *cisd, uint32 offset)
+{
+	uint32 foo;
+
+	sd_trace(("%s: Func = %d\n", __FUNCTION__, func));
+
+	if (!sd->func_cis_ptr[func]) {
+		sd_err(("%s: no func_cis_ptr[%d]\n", __FUNCTION__, func));
+		return SDIOH_API_RC_FAIL;
+	}
+
+	sd_err(("%s: func_cis_ptr[%d]=0x%04x\n", __FUNCTION__, func, sd->func_cis_ptr[func]));
+
+	if (sdioh_sdmmc_card_regread (sd, 0, sd->func_cis_ptr[func]+offset, 1, &foo) < 0) {
+		sd_err(("%s: regread failed: Can't read CIS\n", __FUNCTION__));
+		return SDIOH_API_RC_FAIL;
+	}
+
+	*cisd = (uint8)(foo & 0xff);
+
+	return SDIOH_API_RC_SUCCESS;
+}
+
+extern SDIOH_API_RC
 sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *byte)
 {
 	int err_ret = 0;
 #if defined(MMC_SDIO_ABORT)
 	int sdio_abort_retry = MMC_SDIO_ABORT_RETRY_LIMIT;
-#endif
+#endif // endif
+	struct osl_timespec now, before;
+
+	if (sd_msglevel & SDH_COST_VAL)
+		osl_do_gettimeofday(&before);
 
 	sd_info(("%s: rw=%d, func=%d, addr=0x%05x\n", __FUNCTION__, rw, func, regaddr));
 
@@ -868,14 +907,14 @@ sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *by
 						/* Enable Function 2 */
 						err_ret = sdio_enable_func(sd->func[2]);
 						if (err_ret) {
-							sd_err(("bcmsdh_sdmmc: enable F2 failed:%d",
+							sd_err(("bcmsdh_sdmmc: enable F2 failed:%d\n",
 								err_ret));
 						}
 					} else {
 						/* Disable Function 2 */
 						err_ret = sdio_disable_func(sd->func[2]);
 						if (err_ret) {
-							sd_err(("bcmsdh_sdmmc: Disab F2 failed:%d",
+							sd_err(("bcmsdh_sdmmc: Disab F2 failed:%d\n",
 								err_ret));
 						}
 					}
@@ -888,10 +927,6 @@ sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *by
 #if defined(MMC_SDIO_ABORT)
 			/* to allow abort command through F1 */
 			else if (regaddr == SDIOD_CCCR_IOABORT) {
-				/* XXX Because of SDIO3.0 host issue on Manta,
-				 * sometimes the abort fails.
-				 * Retrying again will fix this issue.
-				 */
 				while (sdio_abort_retry--) {
 					if (sd->func[func]) {
 						sdio_claim_host(sd->func[func]);
@@ -909,6 +944,26 @@ sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *by
 				}
 			}
 #endif /* MMC_SDIO_ABORT */
+			/* to allow abort command through F1 */
+#if defined(SDIO_ISR_THREAD)
+			else if (regaddr == SDIOD_CCCR_INTR_EXTN) {
+				while (sdio_abort_retry--) {
+					if (sd->func[func]) {
+						sdio_claim_host(sd->func[func]);
+						/*
+						 * this sdio_f0_writeb() can be replaced with
+						 * another api depending upon MMC driver change.
+						 * As of this time, this is temporaray one
+						 */
+						sdio_writeb(sd->func[func],
+							*byte, regaddr, &err_ret);
+						sdio_release_host(sd->func[func]);
+					}
+					if (!err_ret)
+						break;
+				}
+			}
+#endif
 			else if (regaddr < 0xF0) {
 				sd_err(("bcmsdh_sdmmc: F0 Wr:0x%02x: write disallowed\n", regaddr));
 			} else {
@@ -942,30 +997,55 @@ sdioh_request_byte(sdioh_info_t *sd, uint rw, uint func, uint regaddr, uint8 *by
 	}
 
 	if (err_ret) {
-		if ((regaddr == 0x1001F) && ((err_ret == -ETIMEDOUT) || (err_ret == -EILSEQ))) {
-			/* XXX: Read/Write to SBSDIO_FUNC1_SLEEPCSR could return -110(timeout)
-			 * 	or -84(CRC) error in case the host tries to wake the device up.
-			 *	Skip error log message if err code is -110 or -84 when accessing
-			 *	to SBSDIO_FUNC1_SLEEPCSR to avoid QA misunderstand and DHD shoul
-			 *	print error log message if retry count over the MAX_KSO_ATTEMPTS.
-			 */
+		if ((regaddr == 0x1001F) && ((err_ret == -ETIMEDOUT) || (err_ret == -EILSEQ)
+			|| (err_ret == -EIO))) {
 		} else {
 			sd_err(("bcmsdh_sdmmc: Failed to %s byte F%d:@0x%05x=%02x, Err: %d\n",
 				rw ? "Write" : "Read", func, regaddr, *byte, err_ret));
 		}
 	}
 
+	if (sd_msglevel & SDH_COST_VAL) {
+		osl_do_gettimeofday(&now);
+		sd_cost(("%s: rw=%d len=1 cost=%lds %luus\n", __FUNCTION__,
+			rw, now.tv_sec-before.tv_sec, now.tv_nsec/1000-before.tv_nsec/1000));
+	}
+
 	return ((err_ret == 0) ? SDIOH_API_RC_SUCCESS : SDIOH_API_RC_FAIL);
 }
+
+uint
+sdioh_set_mode(sdioh_info_t *sd, uint mode)
+{
+	if (mode == SDPCM_TXGLOM_CPY)
+		sd->txglom_mode = mode;
+	else if (mode == SDPCM_TXGLOM_MDESC)
+		sd->txglom_mode = mode;
+
+	return (sd->txglom_mode);
+}
+
+#ifdef PKT_STATICS
+uint32
+sdioh_get_spend_time(sdioh_info_t *sd)
+{
+	return (sd->sdio_spent_time_us);
+}
+#endif
 
 extern SDIOH_API_RC
 sdioh_request_word(sdioh_info_t *sd, uint cmd_type, uint rw, uint func, uint addr,
                                    uint32 *word, uint nbytes)
 {
 	int err_ret = SDIOH_API_RC_FAIL;
+	int err_ret2 = SDIOH_API_RC_SUCCESS; // terence 20130621: prevent dhd_dpc in dead lock
 #if defined(MMC_SDIO_ABORT)
 	int sdio_abort_retry = MMC_SDIO_ABORT_RETRY_LIMIT;
-#endif
+#endif // endif
+	struct osl_timespec now, before;
+
+	if (sd_msglevel & SDH_COST_VAL)
+		osl_do_gettimeofday(&before);
 
 	if (func == 0) {
 		sd_err(("%s: Only CMD52 allowed to F0.\n", __FUNCTION__));
@@ -1013,21 +1093,27 @@ sdioh_request_word(sdioh_info_t *sd, uint cmd_type, uint rw, uint func, uint add
 				 * As of this time, this is temporaray one
 				 */
 				sdio_writeb(sd->func[0],
-					func, SDIOD_CCCR_IOABORT, &err_ret);
+					func, SDIOD_CCCR_IOABORT, &err_ret2);
 				sdio_release_host(sd->func[0]);
 			}
-			if (!err_ret)
+			if (!err_ret2)
 				break;
 		}
 		if (err_ret)
 #endif /* MMC_SDIO_ABORT */
 		{
-			sd_err(("bcmsdh_sdmmc: Failed to %s word, Err: 0x%08x",
-				rw ? "Write" : "Read", err_ret));
+			sd_err(("bcmsdh_sdmmc: Failed to %s word F%d:@0x%05x=%02x, Err: 0x%08x\n",
+				rw ? "Write" : "Read", func, addr, *word, err_ret));
 		}
 	}
 
-	return ((err_ret == 0) ? SDIOH_API_RC_SUCCESS : SDIOH_API_RC_FAIL);
+	if (sd_msglevel & SDH_COST_VAL) {
+		osl_do_gettimeofday(&now);
+		sd_cost(("%s: rw=%d, len=%d cost=%lds %luus\n", __FUNCTION__,
+			rw, nbytes, now.tv_sec-before.tv_sec, now.tv_nsec/1000 - before.tv_nsec/1000));
+	}
+
+	return (((err_ret == 0)&&(err_ret2 == 0)) ? SDIOH_API_RC_SUCCESS : SDIOH_API_RC_FAIL);
 }
 
 #ifdef BCMSDIOH_TXGLOM
@@ -1049,11 +1135,20 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 	uint32 sg_count;
 	struct sdio_func *sdio_func = sd->func[func];
 	struct mmc_host *host = sdio_func->card->host;
+	uint8 *localbuf = NULL;
+	uint local_plen = 0;
+	uint pkt_len = 0;
+	struct osl_timespec now, before;
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
 	ASSERT(pkt);
 	DHD_PM_RESUME_WAIT(sdioh_request_packet_wait);
 	DHD_PM_RESUME_RETURN_ERROR(SDIOH_API_RC_FAIL);
+
+#ifndef PKT_STATICS
+	if (sd_msglevel & SDH_COST_VAL)
+#endif
+		osl_do_gettimeofday(&before);
 
 	blk_size = sd->client_block_size[func];
 	max_blk_count = min(host->max_blk_count, (uint)MAX_IO_RW_EXTENDED_BLK);
@@ -1062,6 +1157,9 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 	pkt_offset = 0;
 	pnext = pkt;
 
+	ttl_len = 0;
+	sg_count = 0;
+	if(sd->txglom_mode == SDPCM_TXGLOM_MDESC) {
 	while (pnext != NULL) {
 		ttl_len = 0;
 		sg_count = 0;
@@ -1089,10 +1187,9 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 			 * a restriction on max tx/glom count (based on host->max_segs).
 			 */
 			if (sg_count >= ARRAYSIZE(sd->sg_list)) {
-				sd_err(("%s: sg list entries(%u) exceed limit(%u),"
+				sd_err(("%s: sg list entries(%u) exceed limit(%zu),"
 					" sd blk_size=%u\n",
-					__FUNCTION__, sg_count, ARRAYSIZE(sd->sg_list),
-					blk_size));
+					__FUNCTION__, sg_count, (size_t)ARRAYSIZE(sd->sg_list), blk_size));
 				return (SDIOH_API_RC_FAIL);
 			}
 			pdata += pkt_offset;
@@ -1153,6 +1250,85 @@ sdioh_request_packet_chain(sdioh_info_t *sd, uint fix_inc, uint write, uint func
 			return SDIOH_API_RC_FAIL;
 		}
 	}
+	} else if(sd->txglom_mode == SDPCM_TXGLOM_CPY) {
+		for (pnext = pkt; pnext; pnext = PKTNEXT(sd->osh, pnext)) {
+			ttl_len += PKTLEN(sd->osh, pnext);
+		}
+		/* Claim host controller */
+		sdio_claim_host(sd->func[func]);
+		for (pnext = pkt; pnext; pnext = PKTNEXT(sd->osh, pnext)) {
+			uint8 *buf = (uint8*)PKTDATA(sd->osh, pnext);
+			pkt_len = PKTLEN(sd->osh, pnext);
+
+			if (!localbuf) {
+				localbuf = (uint8 *)MALLOC(sd->osh, ttl_len);
+				if (localbuf == NULL) {
+					sd_err(("%s: %s TXGLOM: localbuf malloc FAILED\n",
+						__FUNCTION__, (write) ? "TX" : "RX"));
+					goto txglomfail;
+				}
+			}
+
+			bcopy(buf, (localbuf + local_plen), pkt_len);
+			local_plen += pkt_len;
+			if (PKTNEXT(sd->osh, pnext))
+				continue;
+
+			buf = localbuf;
+			pkt_len = local_plen;
+txglomfail:
+			/* Align Patch */
+			if (!write || pkt_len < 32)
+				pkt_len = (pkt_len + 3) & 0xFFFFFFFC;
+			else if (pkt_len % blk_size)
+				pkt_len += blk_size - (pkt_len % blk_size);
+
+			if ((write) && (!fifo))
+				err_ret = sdio_memcpy_toio(sd->func[func], addr, buf, pkt_len);
+			else if (write)
+				err_ret = sdio_memcpy_toio(sd->func[func], addr, buf, pkt_len);
+			else if (fifo)
+				err_ret = sdio_readsb(sd->func[func], buf, addr, pkt_len);
+			else
+				err_ret = sdio_memcpy_fromio(sd->func[func], buf, addr, pkt_len);
+
+			if (err_ret)
+				sd_err(("%s: %s FAILED %p[%d], addr=0x%05x, pkt_len=%d, ERR=%d\n",
+				       __FUNCTION__,
+				       (write) ? "TX" : "RX",
+				       pnext, sg_count, addr, pkt_len, err_ret));
+			else
+				sd_trace(("%s: %s xfr'd %p[%d], addr=0x%05x, len=%d\n",
+					__FUNCTION__,
+					(write) ? "TX" : "RX",
+					pnext, sg_count, addr, pkt_len));
+
+			if (!fifo)
+				addr += pkt_len;
+			sg_count ++;
+		}
+		sdio_release_host(sd->func[func]);
+	} else {
+		sd_err(("%s: set to wrong glom mode %d\n", __FUNCTION__, sd->txglom_mode));
+		return SDIOH_API_RC_FAIL;
+	}
+
+	if (localbuf)
+		MFREE(sd->osh, localbuf, ttl_len);
+
+#ifndef PKT_STATICS
+	if (sd_msglevel & SDH_COST_VAL)
+#endif
+	{
+		osl_do_gettimeofday(&now);
+		sd_cost(("%s: rw=%d, ttl_len=%d, cost=%lds %luus\n", __FUNCTION__,
+			write, ttl_len, now.tv_sec-before.tv_sec, now.tv_nsec/1000-before.tv_nsec/1000));
+	}
+
+#ifdef PKT_STATICS
+	if (write && (func == 2))
+		sd->sdio_spent_time_us = osl_do_gettimediff(&now, &before);
+#endif
 
 	sd_trace(("%s: Exit\n", __FUNCTION__));
 	return SDIOH_API_RC_SUCCESS;
@@ -1165,9 +1341,13 @@ sdioh_buffer_tofrom_bus(sdioh_info_t *sd, uint fix_inc, uint write, uint func,
 {
 	bool fifo = (fix_inc == SDIOH_DATA_FIX);
 	int err_ret = 0;
+	struct osl_timespec now, before;
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
 	ASSERT(buf);
+
+	if (sd_msglevel & SDH_COST_VAL)
+		osl_do_gettimeofday(&before);
 
 	/* NOTE:
 	 * For all writes, each packet length is aligned to 32 (or 4)
@@ -1199,6 +1379,13 @@ sdioh_buffer_tofrom_bus(sdioh_info_t *sd, uint fix_inc, uint write, uint func,
 			(write) ? "TX" : "RX", buf, addr, len));
 
 	sd_trace(("%s: Exit\n", __FUNCTION__));
+
+	if (sd_msglevel & SDH_COST_VAL) {
+		osl_do_gettimeofday(&now);
+		sd_cost(("%s: rw=%d, len=%d cost=%lds %luus\n", __FUNCTION__,
+			write, len, now.tv_sec-before.tv_sec, now.tv_nsec/1000 - before.tv_nsec/1000));
+	}
+
 	return ((err_ret == 0) ? SDIOH_API_RC_SUCCESS : SDIOH_API_RC_FAIL);
 }
 
@@ -1219,11 +1406,14 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 {
 	SDIOH_API_RC status;
 	void *tmppkt;
-	int is_vmalloc = FALSE;
+	struct osl_timespec now, before;
 
 	sd_trace(("%s: Enter\n", __FUNCTION__));
 	DHD_PM_RESUME_WAIT(sdioh_request_buffer_wait);
 	DHD_PM_RESUME_RETURN_ERROR(SDIOH_API_RC_FAIL);
+
+	if (sd_msglevel & SDH_COST_VAL)
+		osl_do_gettimeofday(&before);
 
 	if (pkt) {
 #ifdef BCMSDIOH_TXGLOM
@@ -1241,20 +1431,10 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 	}
 
 	ASSERT(buffer);
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 24)
-	is_vmalloc = is_vmalloc_addr(buffer);
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(2, 6, 24) */
 
 	/* buffer and length are aligned, use it directly so we can avoid memory copy */
-	if ((((ulong)buffer & DMA_ALIGN_MASK) == 0) && ((buf_len & DMA_ALIGN_MASK) == 0) &&
-			(!is_vmalloc)) {
+	if (((ulong)buffer & DMA_ALIGN_MASK) == 0 && (buf_len & DMA_ALIGN_MASK) == 0)
 		return sdioh_buffer_tofrom_bus(sd, fix_inc, write, func, addr, buffer, buf_len);
-	}
-
-	if (is_vmalloc) {
-		sd_trace(("%s: Need to memory copy due to virtual memory address.\n",
-			__FUNCTION__));
-	}
 
 	sd_trace(("%s: [%d] doing memory copy buf=%p, len=%d\n",
 		__FUNCTION__, write, buffer, buf_len));
@@ -1277,6 +1457,12 @@ sdioh_request_buffer(sdioh_info_t *sd, uint pio_dma, uint fix_inc, uint write, u
 
 	PKTFREE_STATIC(sd->osh, tmppkt, write ? TRUE : FALSE);
 
+	if (sd_msglevel & SDH_COST_VAL) {
+		osl_do_gettimeofday(&now);
+		sd_cost(("%s: len=%d cost=%lds %luus\n", __FUNCTION__,
+			buf_len, now.tv_sec-before.tv_sec, now.tv_nsec/1000 - before.tv_nsec/1000));
+	}
+
 	return status;
 }
 
@@ -1289,7 +1475,6 @@ sdioh_abort(sdioh_info_t *sd, uint func)
 #endif /* defined(MMC_SDIO_ABORT) */
 	sd_trace(("%s: Enter\n", __FUNCTION__));
 
-	/* XXX Standard Linux SDIO Stack cannot perform an abort. */
 #if defined(MMC_SDIO_ABORT)
 	/* issue abort cmd52 command through F1 */
 	sdioh_request_byte(sd, SD_IO_OP_WRITE, SDIO_FUNC_0, SDIOD_CCCR_IOABORT, &t_func);
@@ -1366,10 +1551,7 @@ static void IRQHandler(struct sdio_func *func)
 		ASSERT(sd->intr_handler);
 		ASSERT(sd->intr_handler_arg);
 		(sd->intr_handler)(sd->intr_handler_arg);
-	} else { /* XXX - Do not remove these sd_err messages.  Need to figure
-			          out how to keep interrupts disabled until DHD registers
-			          a handler.
-			  */
+	} else {
 		sd_err(("bcmsdh_sdmmc: ***IRQHandler\n"));
 
 		sd_err(("%s: Not ready for intr: enabled %d, handler %p\n",
@@ -1413,6 +1595,8 @@ sdioh_sdmmc_card_regwrite(sdioh_info_t *sd, int func, uint32 regaddr, int regsiz
 }
 #endif /* NOTUSED */
 
+extern bool bcm43753_chip_mode;
+
 int
 sdioh_start(sdioh_info_t *sd, int stage)
 {
@@ -1438,11 +1622,22 @@ sdioh_start(sdioh_info_t *sd, int stage)
 		   2.6.27. The implementation prior to that is buggy, and needs broadcom's
 		   patch for it
 		*/
+#if !defined(ENABLE_INSMOD_NO_FW_LOAD)
+		if(!bcm43753_chip_mode){
+			if ((ret = sdio_reset_comm(sd->func[0]->card))) {
+				sd_err(("%s Failed, error = %d\n", __FUNCTION__, ret));
+				return ret;
+			}
+		}
+#endif
+
+#if defined(ENABLE_INSMOD_NO_FW_LOAD) && !defined(BUS_POWER_RESTORE)
 		if ((ret = sdio_reset_comm(sd->func[0]->card))) {
 			sd_err(("%s Failed, error = %d\n", __FUNCTION__, ret));
 			return ret;
-		}
-		else {
+		} else
+#endif
+		{
 			sd->num_funcs = 2;
 			sd->sd_blockmode = TRUE;
 			sd->use_client_ints = TRUE;
@@ -1468,6 +1663,7 @@ sdioh_start(sdioh_info_t *sd, int stage)
 				sdio_claim_host(sd->func[2]);
 
 				sd->client_block_size[2] = sd_f2_blocksize;
+				printf("%s: set sd_f2_blocksize %d\n", __FUNCTION__, sd_f2_blocksize);
 				ret = sdio_set_block_size(sd->func[2], sd_f2_blocksize);
 				if (ret) {
 					sd_err(("bcmsdh_sdmmc: Failed to set F2 "
@@ -1491,7 +1687,7 @@ sdioh_start(sdioh_info_t *sd, int stage)
 #else /* defined(OOB_INTR_ONLY) */
 #if defined(HW_OOB)
 			sdioh_enable_func_intr(sd);
-#endif
+#endif // endif
 			bcmsdh_oob_intr_set(sd->bcmsdh, TRUE);
 #endif /* !defined(OOB_INTR_ONLY) */
 		}
@@ -1522,7 +1718,7 @@ sdioh_stop(sdioh_info_t *sd)
 #else /* defined(OOB_INTR_ONLY) */
 #if defined(HW_OOB)
 		sdioh_disable_func_intr(sd);
-#endif
+#endif // endif
 		bcmsdh_oob_intr_set(sd->bcmsdh, FALSE);
 #endif /* !defined(OOB_INTR_ONLY) */
 	}
@@ -1564,14 +1760,21 @@ sdioh_gpio_init(sdioh_info_t *sd)
 uint
 sdmmc_get_clock_rate(sdioh_info_t *sd)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) || (LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0))
+	return 0;
+#else
 	struct sdio_func *sdio_func = sd->func[0];
 	struct mmc_host *host = sdio_func->card->host;
 	return mmc_host_clk_rate(host);
+#endif
 }
 
 void
 sdmmc_set_clock_rate(sdioh_info_t *sd, uint hz)
 {
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)) || (LINUX_VERSION_CODE < KERNEL_VERSION(3, 4, 0))
+	return;
+#else
 	struct sdio_func *sdio_func = sd->func[0];
 	struct mmc_host *host = sdio_func->card->host;
 	struct mmc_ios *ios = &host->ios;
@@ -1591,6 +1794,7 @@ sdmmc_set_clock_rate(sdioh_info_t *sd, uint hz)
 	host->ops->set_ios(host, ios);
 	DHD_ERROR(("%s: After change: sd clock rate is %u\n", __FUNCTION__, ios->clock));
 	mmc_host_clk_release(host);
+#endif
 }
 
 void

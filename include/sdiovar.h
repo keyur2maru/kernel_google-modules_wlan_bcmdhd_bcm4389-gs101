@@ -2,7 +2,7 @@
  * Structure used by apps whose drivers access SDIO drivers.
  * Pulled out separately so dhdu and wlu can both use it.
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -18,8 +18,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: sdiovar.h 660496 2016-09-20 19:28:50Z $
  */
 
 #ifndef _sdiovar_h_
@@ -33,12 +39,6 @@ typedef struct sdreg {
 	int value;
 } sdreg_t;
 
-typedef struct sdreg_64 {
-	int func;
-	int offset;
-	uint64 value;
-} sdreg_64_t;
-
 /* Common msglevel constants */
 #define SDH_ERROR_VAL		0x0001	/* Error */
 #define SDH_TRACE_VAL		0x0002	/* Trace */
@@ -48,6 +48,7 @@ typedef struct sdreg_64 {
 #define SDH_CTRL_VAL		0x0020	/* Control Regs */
 #define SDH_LOG_VAL		0x0040	/* Enable bcmlog */
 #define SDH_DMA_VAL		0x0080	/* DMA */
+#define SDH_COST_VAL		0x8000	/* Control Regs */
 
 #define NUM_PREV_TRANSACTIONS	16
 

@@ -1,7 +1,7 @@
 /*
  * Bloom filter support
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmbloom.c 788740 2018-11-13 21:45:01Z $
  */
 
 #include <typedefs.h>
@@ -32,10 +38,9 @@
 #else /* !BCMDRIVER */
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 #ifndef ASSERT
 #define ASSERT(exp)
-#endif
+#endif // endif
 #endif /* !BCMDRIVER */
 #include <bcmutils.h>
 
@@ -70,16 +75,17 @@ bcm_bloom_create(bcm_bloom_alloc_t alloc_cb,
 		err = BCME_NOMEM;
 		goto done;
 	}
-	bzero(bp, sizeof(*bp));
 
+	memset(bp, 0, sizeof(*bp));
 	bp->cb_ctx = cb_ctx;
 	bp->max_hash = max_hash;
 	bp->hash = (*alloc_cb)(cb_ctx, sizeof(*bp->hash) * max_hash);
+	memset(bp->hash, 0, sizeof(*bp->hash) * max_hash);
+
 	if (!bp->hash) {
 		err = BCME_NOMEM;
 		goto done;
 	}
-	bzero(bp->hash, sizeof(*bp->hash) * max_hash);
 
 	if (filter_size > 0) {
 		bp->filter = (*alloc_cb)(cb_ctx, filter_size);
@@ -88,7 +94,7 @@ bcm_bloom_create(bcm_bloom_alloc_t alloc_cb,
 			goto done;
 		}
 		bp->filter_size = filter_size;
-		bzero(bp->filter, filter_size);
+		memset(bp->filter, 0, filter_size);
 	}
 
 	*bloom = bp;
@@ -183,7 +189,9 @@ bcm_bloom_is_member(bcm_bloom_filter_t *bp,
 		pos = (*bp->hash[i])(bp->cb_ctx, i, tag, tag_len);
 
 		/* all bits must be set for a match */
+		CLANG_DIAGNOSTIC_PUSH_SUPPRESS_CAST()
 		if (isclr(buf, pos % BLOOM_BIT_LEN(buf_len))) {
+		CLANG_DIAGNOSTIC_POP()
 			err = BCME_NOTFOUND;
 			break;
 		}

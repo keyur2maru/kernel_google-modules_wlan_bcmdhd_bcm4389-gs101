@@ -4,7 +4,7 @@
  * Provides type definitions and function prototypes used to link the
  * DHD OS, bus, and protocol modules.
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -20,10 +20,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
+ *
  *
  * <<Broadcom-WL-IPTag/Open:>>
  *
- * $Id$
+ * $Id: dhd_proto.h 814912 2019-04-15 10:38:59Z $
  */
 
 #ifndef _dhd_proto_h_
@@ -33,28 +37,16 @@
 #include <wlioctl.h>
 #ifdef BCMPCIE
 #include <dhd_flowring.h>
-#endif
+#endif // endif
 
-#define DEFAULT_IOCTL_RESP_TIMEOUT	(5 * 1000) /* 5 seconds */
+#define DEFAULT_IOCTL_RESP_TIMEOUT	5000
 #ifndef IOCTL_RESP_TIMEOUT
-#if defined(BCMQT_HW)
-#define IOCTL_RESP_TIMEOUT  (600 * 1000) /* 600 sec in real time */
-#elif defined(BCMFPGA_HW)
-#define IOCTL_RESP_TIMEOUT  (60 * 1000) /* 60 sec in real time */
-#else
 /* In milli second default value for Production FW */
 #define IOCTL_RESP_TIMEOUT  DEFAULT_IOCTL_RESP_TIMEOUT
-#endif /* BCMQT */
 #endif /* IOCTL_RESP_TIMEOUT */
 
-#if defined(BCMQT_HW)
-#define IOCTL_DMAXFER_TIMEOUT  (260 * 1000) /* 260 seconds second */
-#elif defined(BCMFPGA_HW)
-#define IOCTL_DMAXFER_TIMEOUT  (120 * 1000) /* 120 seconds */
-#else
 /* In milli second default value for Production FW */
-#define IOCTL_DMAXFER_TIMEOUT  (15 * 1000) /* 15 seconds for Production FW */
-#endif /* BCMQT */
+#define IOCTL_DMAXFER_TIMEOUT  10000
 
 #ifndef MFG_IOCTL_RESP_TIMEOUT
 #define MFG_IOCTL_RESP_TIMEOUT  20000  /* In milli second default value for MFG FW */
@@ -85,13 +77,7 @@ extern int dhd_prot_attach(dhd_pub_t *dhdp);
 /* Initilizes the index block for dma'ing indices */
 extern int dhd_prot_dma_indx_init(dhd_pub_t *dhdp, uint32 rw_index_sz,
 	uint8 type, uint32 length);
-#ifdef DHD_DMA_INDICES_SEQNUM
-extern int dhd_prot_dma_indx_copybuf_init(dhd_pub_t *dhd, uint32 buf_sz,
-	uint8 type);
-extern uint32 dhd_prot_read_seqnum(dhd_pub_t *dhd, bool host);
-extern void dhd_prot_write_host_seqnum(dhd_pub_t *dhd, uint32 seq_num);
-extern void dhd_prot_save_dmaidx(dhd_pub_t *dhd);
-#endif /* DHD_DMA_INDICES_SEQNUM */
+
 /* Unlink, frees allocated protocol memory (including dhd_prot) */
 extern void dhd_prot_detach(dhd_pub_t *dhdp);
 
@@ -127,8 +113,6 @@ extern int dhd_prot_iovar_op(dhd_pub_t *dhdp, const char *name,
 
 /* Add prot dump output to a buffer */
 extern void dhd_prot_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf);
-extern void dhd_prot_counters(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf,
-	bool print_ringinfo, bool print_pktidinfo);
 
 /* Dump extended trap data */
 extern int dhd_prot_dump_extended_trap(dhd_pub_t *dhdp, struct bcmstrbuf *b, bool raw);
@@ -144,32 +128,18 @@ extern int dhd_process_pkt_reorder_info(dhd_pub_t *dhd, uchar *reorder_info_buf,
 	uint reorder_info_len, void **pkt, uint32 *free_buf_count);
 
 #ifdef BCMPCIE
-extern bool dhd_prot_process_msgbuf_txcpl(dhd_pub_t *dhd, int ringtype, uint32 *txcpl_items);
-extern bool dhd_prot_process_msgbuf_rxcpl(dhd_pub_t *dhd, int ringtype,	uint32 *rxcpl_items);
-extern bool dhd_prot_process_msgbuf_infocpl(dhd_pub_t *dhd, uint bound,
-	uint32 *evtlog_items);
-uint32 dhd_prot_get_tx_post_bound(dhd_pub_t *dhd);
-uint32 dhd_prot_get_ctrl_cpl_post_bound(dhd_pub_t *dhd);
-uint32 dhd_prot_get_tx_cpl_bound(dhd_pub_t *dhd);
-uint32 dhd_prot_get_rx_cpl_post_bound(dhd_pub_t *dhd);
-void dhd_prot_set_tx_cpl_bound(dhd_pub_t *dhd, uint32 val);
-void dhd_prot_set_rx_cpl_post_bound(dhd_pub_t *dhd, uint32 val);
-void dhd_prot_set_tx_post_bound(dhd_pub_t *dhd, uint32 val);
-void dhd_prot_set_ctrl_cpl_post_bound(dhd_pub_t *dhd, uint32 val);
-#ifdef BTLOG
-extern bool dhd_prot_process_msgbuf_btlogcpl(dhd_pub_t *dhd, uint bound);
-#endif	/* BTLOG */
-extern bool dhd_prot_process_ctrlbuf(dhd_pub_t * dhd, uint32 *ctrlcpl_items);
+extern bool dhd_prot_process_msgbuf_txcpl(dhd_pub_t *dhd, uint bound, int ringtype);
+extern bool dhd_prot_process_msgbuf_rxcpl(dhd_pub_t *dhd, uint bound, int ringtype);
+extern bool dhd_prot_process_msgbuf_infocpl(dhd_pub_t *dhd, uint bound);
+extern int dhd_prot_process_ctrlbuf(dhd_pub_t * dhd);
 extern int dhd_prot_process_trapbuf(dhd_pub_t * dhd);
 extern bool dhd_prot_dtohsplit(dhd_pub_t * dhd);
 extern int dhd_post_dummy_msg(dhd_pub_t *dhd);
 extern int dhdmsgbuf_lpbk_req(dhd_pub_t *dhd, uint len);
 extern void dhd_prot_rx_dataoffset(dhd_pub_t *dhd, uint32 offset);
 extern int dhd_prot_txdata(dhd_pub_t *dhd, void *p, uint8 ifidx);
-extern void dhd_prot_schedule_aggregate_h2d_db(dhd_pub_t *dhd, uint16 flow_id);
 extern int dhdmsgbuf_dmaxfer_req(dhd_pub_t *dhd,
-	uint len, uint srcdelay, uint destdelay, uint d11_lpbk, uint core_num,
-	uint32 mem_addr);
+	uint len, uint srcdelay, uint destdelay, uint d11_lpbk, uint core_num);
 extern int dhdmsgbuf_dmaxfer_status(dhd_pub_t *dhd, dma_xfer_info_t *result);
 
 extern void dhd_dma_buf_init(dhd_pub_t *dhd, void *dma_buf,
@@ -185,10 +155,10 @@ extern uint32 dhd_prot_metadata_dbg_set(dhd_pub_t *dhd, bool val);
 extern uint32 dhd_prot_metadata_dbg_get(dhd_pub_t *dhd);
 extern uint32 dhd_prot_metadatalen_set(dhd_pub_t *dhd, uint32 val, bool rx);
 extern uint32 dhd_prot_metadatalen_get(dhd_pub_t *dhd, bool rx);
-extern void dhd_prot_print_flow_ring(dhd_pub_t *dhd, void *msgbuf_flow_info, bool h2d,
+extern void dhd_prot_print_flow_ring(dhd_pub_t *dhd, void *msgbuf_flow_info,
 	struct bcmstrbuf *strbuf, const char * fmt);
 extern void dhd_prot_print_info(dhd_pub_t *dhd, struct bcmstrbuf *strbuf);
-extern bool dhd_prot_update_txflowring(dhd_pub_t *dhdp, uint16 flow_id, void *msgring_info);
+extern void dhd_prot_update_txflowring(dhd_pub_t *dhdp, uint16 flow_id, void *msgring_info);
 extern void dhd_prot_txdata_write_flush(dhd_pub_t *dhd, uint16 flow_id);
 extern uint32 dhd_prot_txp_threshold(dhd_pub_t *dhd, bool set, uint32 val);
 extern void dhd_prot_reset(dhd_pub_t *dhd);
@@ -199,20 +169,17 @@ extern int dhd_prot_flow_ring_batch_suspend_request(dhd_pub_t *dhd, uint16 *ring
 extern int dhd_prot_flow_ring_resume(dhd_pub_t *dhd, flow_ring_node_t *flow_ring_node);
 #endif /* IDLE_TX_FLOW_MGMT */
 extern int dhd_prot_init_info_rings(dhd_pub_t *dhd);
-#ifdef BTLOG
-extern int dhd_prot_init_btlog_rings(dhd_pub_t *dhd);
-#endif	/* BTLOG */
-extern int dhd_prot_init_md_rings(dhd_pub_t *dhd);
+#ifdef DHD_HP2P
+extern int dhd_prot_init_hp2p_rings(dhd_pub_t *dhd);
+#endif /* DHD_HP2P */
+
 extern int dhd_prot_check_tx_resource(dhd_pub_t *dhd);
-#else /* BCMPCIE */
-static INLINE uint32 dhd_prot_get_tx_post_bound(dhd_pub_t *dhd) { return 0; }
-static INLINE uint32 dhd_prot_get_ctrl_cpl_post_bound(dhd_pub_t *dhd) { return 0; }
-static INLINE uint32 dhd_prot_get_tx_cpl_bound(dhd_pub_t *dhd) { return 0; }
-static INLINE uint32 dhd_prot_get_rx_cpl_post_bound(dhd_pub_t *dhd) { return 0; }
-static INLINE void dhd_prot_set_tx_cpl_bound(dhd_pub_t *dhd, uint32 val) { }
-static INLINE void dhd_prot_set_rx_cpl_post_bound(dhd_pub_t *dhd, uint32 val) { }
-static INLINE void dhd_prot_set_tx_post_bound(dhd_pub_t *dhd, uint32 val) { }
-static INLINE void dhd_prot_set_ctrl_cpl_post_bound(dhd_pub_t *dhd, uint32 val) { }
+
+extern void dhd_prot_update_pktid_txq_stop_cnt(dhd_pub_t *dhd);
+extern void dhd_prot_update_pktid_txq_start_cnt(dhd_pub_t *dhd);
+#else
+static INLINE void dhd_prot_update_pktid_txq_stop_cnt(dhd_pub_t *dhd) { return; }
+static INLINE void dhd_prot_update_pktid_txq_start_cnt(dhd_pub_t *dhd) { return; }
 #endif /* BCMPCIE */
 
 #ifdef DHD_LB
@@ -238,24 +205,15 @@ extern bool dhd_prot_pkt_fixed_rate(dhd_pub_t *dhd, bool enable, bool set);
 
 extern void dhd_prot_dma_indx_free(dhd_pub_t *dhd);
 
-#ifdef SNAPSHOT_UPLOAD
-/* send request to take snapshot */
-int dhd_prot_send_snapshot_request(dhd_pub_t *dhdp, uint8 snapshot_type, uint8 snapshot_param);
-/* get uploaded snapshot */
-int dhd_prot_get_snapshot(dhd_pub_t *dhdp, uint8 snapshot_type, uint32 offset,
-	uint32 dst_buf_size, uint8 *dst_buf, uint32 *dst_size, bool *is_more);
-#endif	/* SNAPSHOT_UPLOAD */
-
 #ifdef EWP_EDL
 int dhd_prot_init_edl_rings(dhd_pub_t *dhd);
-bool dhd_prot_process_msgbuf_edl(dhd_pub_t *dhd, uint32 *evtlog_items);
+bool dhd_prot_process_msgbuf_edl(dhd_pub_t *dhd);
 int dhd_prot_process_edl_complete(dhd_pub_t *dhd, void *evt_decode_data);
 #endif /* EWP_EDL  */
 
 /* APIs for managing a DMA-able buffer */
 int  dhd_dma_buf_alloc(dhd_pub_t *dhd, dhd_dma_buf_t *dma_buf, uint32 buf_len);
 void dhd_dma_buf_free(dhd_pub_t *dhd, dhd_dma_buf_t *dma_buf);
-void dhd_local_buf_reset(char *buf, uint32 len);
 
 /********************************
  * For version-string expansion *
@@ -271,12 +229,14 @@ void dhd_local_buf_reset(char *buf, uint32 len);
 int dhd_get_hscb_info(dhd_pub_t *dhd, void ** va, uint32 *len);
 int dhd_get_hscb_buff(dhd_pub_t *dhd, uint32 offset, uint32 length, void * buff);
 
-extern int dhd_prot_mdring_link_unlink(dhd_pub_t *dhd, int idx, bool link);
-extern int dhd_prot_mdring_linked_ring(dhd_pub_t *dhd);
+#ifdef DHD_HP2P
+extern uint8 dhd_prot_hp2p_enable(dhd_pub_t *dhd, bool set, int enable);
+extern uint32 dhd_prot_pkt_threshold(dhd_pub_t *dhd, bool set, uint32 val);
+extern uint32 dhd_prot_time_threshold(dhd_pub_t *dhd, bool set, uint32 val);
+extern uint32 dhd_prot_pkt_expiry(dhd_pub_t *dhd, bool set, uint32 val);
+#endif // endif
 
 #ifdef DHD_MAP_LOGGING
 extern void dhd_prot_smmu_fault_dump(dhd_pub_t *dhdp);
 #endif /* DHD_MAP_LOGGING */
-
-void dhd_prot_set_ring_size_ver(dhd_pub_t *dhd, int version);
 #endif /* _dhd_proto_h_ */

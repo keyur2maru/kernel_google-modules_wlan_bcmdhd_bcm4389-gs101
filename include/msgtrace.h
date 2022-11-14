@@ -1,7 +1,7 @@
 /*
  * Trace messages sent over HBUS
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: msgtrace.h 542902 2015-03-22 23:29:48Z $
  */
 
 #ifndef	_MSGTRACE_H
@@ -26,23 +32,19 @@
 
 #ifndef _TYPEDEFS_H_
 #include <typedefs.h>
-#endif
+#endif // endif
 
 /* This marks the start of a packed structure section. */
 #include <packed_section_start.h>
 
 #define MSGTRACE_VERSION 1
 
-enum msgtrace_hdr_type {
-	MSGTRACE_HDR_TYPE_MSG = 0u,
-	MSGTRACE_HDR_TYPE_LOG = 1u,
-	MSGTRACE_HDR_TYPE_COEX_LOG = 2u
-};
-
 /* Message trace header */
 typedef BWL_PRE_PACKED_STRUCT struct msgtrace_hdr {
 	uint8	version;
 	uint8   trace_type;
+#define MSGTRACE_HDR_TYPE_MSG 0
+#define MSGTRACE_HDR_TYPE_LOG 1
 	uint16	len;	/* Len of the trace */
 	uint32	seqnum;	/* Sequence number of message. Useful if the messsage has been lost
 			 * because of DMA error or a bus reset (ex: SDIO Func2)

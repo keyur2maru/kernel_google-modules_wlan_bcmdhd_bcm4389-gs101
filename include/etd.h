@@ -1,7 +1,7 @@
 /*
  * Extended Trap data component interface file.
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,8 +17,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: etd.h 813064 2019-04-03 11:29:38Z $
  */
 
 #ifndef _ETD_H_
@@ -26,9 +32,8 @@
 
 #if defined(ETD) && !defined(WLETD)
 #include <hnd_trap.h>
-#endif
+#endif // endif
 #include <bcmutils.h>
-
 /* Tags for structures being used by etd info iovar.
  * Related structures are defined in wlioctl.h.
  */
@@ -54,30 +59,29 @@ typedef struct hnd_ext_trap_hdr {
 } hnd_ext_trap_hdr_t;
 
 typedef enum {
-	TAG_TRAP_NONE			= 0u,  /* None trap type */
-	TAG_TRAP_SIGNATURE		= 1u,  /* Processor register dumps */
-	TAG_TRAP_STACK			= 2u,  /* Processor stack dump (possible code locations) */
-	TAG_TRAP_MEMORY			= 3u,  /* Memory subsystem dump */
-	TAG_TRAP_DEEPSLEEP		= 4u,  /* Deep sleep health check failures */
-	TAG_TRAP_PSM_WD			= 5u,  /* PSM watchdog information */
-	TAG_TRAP_PHY			= 6u,  /* Phy related issues */
-	TAG_TRAP_BUS			= 7u,  /* Bus level issues */
-	TAG_TRAP_MAC_SUSP		= 8u,  /* Mac level suspend issues */
-	TAG_TRAP_BACKPLANE		= 9u,  /* Backplane related errors */
+	TAG_TRAP_NONE		 = 0,  /* None trap type */
+	TAG_TRAP_SIGNATURE       = 1,  /* Processor register dumps */
+	TAG_TRAP_STACK           = 2,  /* Processor stack dump (possible code locations) */
+	TAG_TRAP_MEMORY          = 3,  /* Memory subsystem dump */
+	TAG_TRAP_DEEPSLEEP       = 4,  /* Deep sleep health check failures */
+	TAG_TRAP_PSM_WD          = 5,  /* PSM watchdog information */
+	TAG_TRAP_PHY             = 6,  /* Phy related issues */
+	TAG_TRAP_BUS             = 7,  /* Bus level issues */
+	TAG_TRAP_MAC_SUSP        = 8,  /* Mac level suspend issues */
+	TAG_TRAP_BACKPLANE       = 9,  /* Backplane related errors */
 	/* Values 10 through 14 are in use by etd_data info iovar */
-	TAG_TRAP_PCIE_Q			= 15u, /* PCIE Queue state during memory trap */
-	TAG_TRAP_WLC_STATE		= 16u, /* WLAN state during memory trap */
-	TAG_TRAP_MAC_WAKE		= 17u, /* Mac level wake issues */
-	TAG_TRAP_PHYTXERR_THRESH	= 18u, /* Phy Tx Err */
-	TAG_TRAP_HC_DATA		= 19u, /* Data collected by HC module */
-	TAG_TRAP_LOG_DATA		= 20u,
-	TAG_TRAP_CODE			= 21u, /* The trap type */
-	TAG_TRAP_HMAP			= 22u, /* HMAP violation Address and Info */
-	TAG_TRAP_PCIE_ERR_ATTN		= 23u, /* PCIE error attn log */
-	TAG_TRAP_AXI_ERROR		= 24u, /* AXI Error */
-	TAG_TRAP_AXI_HOST_INFO		= 25u, /* AXI Host log */
-	TAG_TRAP_AXI_SR_ERROR		= 26u, /* AXI SR error log */
-	TAG_TRAP_MEM_BIT_FLIP		= 27u, /* Memory 1-Bit Flip error */
+	TAG_TRAP_PCIE_Q         = 15,  /* PCIE Queue state during memory trap */
+	TAG_TRAP_WLC_STATE      = 16,  /* WLAN state during memory trap */
+	TAG_TRAP_MAC_WAKE       = 17,  /* Mac level wake issues */
+	TAG_TRAP_PHYTXERR_THRESH = 18, /* Phy Tx Err */
+	TAG_TRAP_HC_DATA        = 19,  /* Data collected by HC module */
+	TAG_TRAP_LOG_DATA	= 20,
+	TAG_TRAP_CODE		= 21, /* The trap type */
+	TAG_TRAP_HMAP		= 22, /* HMAP violation Address and Info */
+	TAG_TRAP_PCIE_ERR_ATTN	= 23, /* PCIE error attn log */
+	TAG_TRAP_AXI_ERROR	= 24, /* AXI Error */
+	TAG_TRAP_AXI_HOST_INFO  = 25, /* AXI Host log */
+	TAG_TRAP_AXI_SR_ERROR	= 26, /* AXI SR error log */
 	TAG_TRAP_LAST  /* This must be the last entry */
 } hnd_ext_tag_trap_t;
 
@@ -142,7 +146,7 @@ typedef struct hnd_ext_trap_axi_sr_err_v1
 	uint32 sr_dig_gci_status_0;
 } hnd_ext_trap_axi_sr_err_v1_t;
 
-#define HND_EXT_TRAP_PSMWD_INFO_VER_1	(1u)
+#define HND_EXT_TRAP_PSMWD_INFO_VER	1
 typedef struct hnd_ext_trap_psmwd_v1 {
 	uint16 xtag;
 	uint16 version; /* version of the information following this */
@@ -178,8 +182,7 @@ typedef struct hnd_ext_trap_psmwd_v1 {
 	uint16 pad;
 } hnd_ext_trap_psmwd_v1_t;
 
-#define HND_EXT_TRAP_PSMWD_INFO_VER_2	(2u)
-typedef struct hnd_ext_trap_psmwd_v2 {
+typedef struct hnd_ext_trap_psmwd {
 	uint16 xtag;
 	uint16 version; /* version of the information following this */
 	uint32 i32_maccontrol;
@@ -216,44 +219,7 @@ typedef struct hnd_ext_trap_psmwd_v2 {
 	uint16 shm_prewds_cnt;
 	uint16 shm_txtplufl_cnt;
 	uint16 shm_txphyerr_cnt;
-} hnd_ext_trap_psmwd_v2_t;
-
-#define HND_EXT_TRAP_PSMWD_INFO_VER_3	(3u)
-typedef struct hnd_ext_trap_psmwd_v3 {
-	uint16 xtag;
-	uint16 version; /* version of the information following this */
-	uint32 i32_maccontrol;
-	uint32 i32_maccommand;
-	uint32 i32_macintstatus;
-	uint32 i32_phydebug;
-	uint32 i32_clk_ctl_st;
-	uint32 i32_psmdebug[PSMDBG_REG_READ_CNT_FOR_PSMWDTRAP_V1];
-	uint32 i32_gated_clock_en; /* gated clock en */
-	uint16 rcv_fifo_ctrl;
-	uint16 rx_ctrl1;
-	uint16 rxe_status1;
-	uint16 rxe_status2;
-	uint16 rcv_wrd_count0;
-	uint16 rcv_wrd_count1;
-	uint16 rcv_lfifo_sts;
-	uint16 psm_slp_tmr;
-	uint16 psm_brc;
-	uint16 txe_ctrl;
-	uint16 txe_status;
-	uint16 txe_xmtdmabusy;
-	uint16 txe_xmt_fifo_susp_flush;
-	uint16 ifs_stat;
-	uint16 ifs_medbusy_ctr;
-	uint16 ifs_tx_dur;
-	uint16 slow_ctl;
-	uint16 txe_aqm_fifo_ready;
-	uint16 dagg_ctrl;
-	uint16 shm_prewds_cnt;
-	uint16 shm_txtplufl_cnt;
-	uint16 shm_txphyerr_cnt;
-	uint16 shm_ucode_dbgst;
-	uint16 PAD;
-} hnd_ext_trap_psmwd_v3_t;
+} hnd_ext_trap_psmwd_t;
 
 #define HEAP_HISTOGRAM_DUMP_LEN	6
 #define HEAP_MAX_SZ_BLKS_LEN	2
@@ -282,9 +248,6 @@ typedef struct hnd_ext_trap_heap_err {
 #define MEM_TRAP_NUM_WLC_TX_QUEUES		6
 #define HND_EXT_TRAP_WLC_MEM_ERR_VER_V2		2
 
-/* already there are quite a few chips which are ROM'ed wth this structure
- * Will not be adding version. This will be the V1 structure.
- */
 typedef struct hnd_ext_trap_wlc_mem_err {
 	uint8 instance;
 	uint8 associated;
@@ -387,8 +350,8 @@ typedef struct hnd_ext_trap_macsusp {
 	uint16 shm_ucode_dbgst;
 } hnd_ext_trap_macsusp_t;
 
-#define HND_EXT_TRAP_MACENAB_INFO_VER_1		(1u)
-typedef struct hnd_ext_trap_macenab_v1 {
+#define HND_EXT_TRAP_MACENAB_INFO_VER	1
+typedef struct hnd_ext_trap_macenab {
 	uint16 xtag;
 	uint8 version; /* version of the information following this */
 	uint8 trap_reason;
@@ -410,33 +373,7 @@ typedef struct hnd_ext_trap_macenab_v1 {
 	uint16 i16_0x6aa; /* SLow_PER */
 	uint16 shm_ucode_dbgst;
 	uint16 PAD;
-} hnd_ext_trap_macenab_v1_t;
-
-#define HND_EXT_TRAP_MACENAB_INFO_VER_2		(2u)
-typedef struct hnd_ext_trap_macenab_v2 {
-	uint16 xtag;
-	uint8 version; /* version of the information following this */
-	uint8 trap_reason;
-	uint32 i32_maccontrol;
-	uint32 i32_maccommand;
-	uint32 i32_macintstatus;
-	uint32 i32_psmdebug[8];
-	uint32 i32_clk_ctl_st;
-	uint32 i32_powerctl;
-	uint32 i32_gated_clock_en;
-	uint16 psm_slp_tmr;
-	uint16 psm_brc;
-	uint16 tsf_ctl;
-	uint16 ifs_stat;
-	uint16 ifs_medbusy_ctr;
-	uint16 slow_ctl;
-	uint16 slow_frac;
-	uint16 fast_powerup_delay;
-	uint16 slow_per;
-	uint16 shm_ucode_dbgst;
-	uint16 shm_prewds_cnt;
-	uint16 PAD;
-} hnd_ext_trap_macenab_v2_t;
+} hnd_ext_trap_macenab_t;
 
 #define HND_EXT_TRAP_PHY_INFO_VER_1 (1)
 typedef struct hnd_ext_trap_phydbg {
@@ -515,7 +452,7 @@ typedef struct hnd_ext_trap_phydbg_v2 {
 	uint16 gpioSel;
 	uint16 pktprocdebug;
 	uint32 gpioOut[3];
-	uint32 additional_regs[BCM_FLEX_ARRAY];
+	uint32 additional_regs[1];
 } hnd_ext_trap_phydbg_v2_t;
 
 #define HND_EXT_TRAP_PHY_INFO_VER_3		(3)
@@ -552,7 +489,7 @@ typedef struct hnd_ext_trap_phydbg_v3 {
 	uint32 gpioOut[3];
 	uint16 HESigURateFlagStatus;
 	uint16 HESigUsRateFlagStatus;
-	uint32 additional_regs[BCM_FLEX_ARRAY];
+	uint32 additional_regs[1];
 } hnd_ext_trap_phydbg_v3_t;
 
 /* Phy TxErr Dump Structure */
@@ -662,13 +599,6 @@ typedef struct eventlog_trap_buf_info {
 	uint32 buf_addr;
 } eventlog_trap_buf_info_t;
 
-#define HND_MEM_HC_FB_MEM_VER_1	(1u)
-typedef struct hnd_ext_trap_fb_mem_err {
-	uint16 version;
-	uint16 reserved;
-	uint32 flip_bit_err_time;
-} hnd_ext_trap_fb_mem_err_t;
-
 #if defined(ETD) && !defined(WLETD)
 #define ETD_SW_FLAG_MEM		0x00000001
 
@@ -684,13 +614,7 @@ uint etd_get_reg_dump_config_len(void);
 
 extern bool _etd_enab;
 
-#if defined(ROM_ENAB_RUNTIME_CHECK)
 	#define ETD_ENAB(pub)		(_etd_enab)
-#elif defined(ETD_DISABLED)
-	#define ETD_ENAB(pub)		(0)
-#else
-	#define ETD_ENAB(pub)		(1)
-#endif
 
 #else
 #define ETD_ENAB(pub)		(0)

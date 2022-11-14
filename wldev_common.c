@@ -1,7 +1,7 @@
 /*
  * Common function shared by Linux WEXT, cfg80211 and p2p drivers
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -17,12 +17,17 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: wldev_common.c 786015 2018-10-24 08:21:53Z $
  */
 
 #include <osl.h>
-#include <linuxver.h>
 #include <linux/kernel.h>
 #include <linux/kthread.h>
 #include <linux/netdevice.h>
@@ -33,86 +38,41 @@
 #include <wl_cfg80211.h>
 #include <wl_cfgscan.h>
 #endif /* WL_CFG80211 */
+#include <dhd_config.h>
 
-#if defined(IL_BIGENDIAN)
-#include <bcmendian.h>
-#define htod32(i) (bcmswap32(i))
-#define htod16(i) (bcmswap16(i))
-#define dtoh32(i) (bcmswap32(i))
-#define dtoh16(i) (bcmswap16(i))
-#define htodchanspec(i) htod16(i)
-#define dtohchanspec(i) dtoh16(i)
-#else
 #define htod32(i) (i)
 #define htod16(i) (i)
 #define dtoh32(i) (i)
 #define dtoh16(i) (i)
 #define htodchanspec(i) (i)
 #define dtohchanspec(i) (i)
-#endif
 
-#if defined(CUSTOMER_DBG_PREFIX_ENABLE)
-#define USER_PREFIX_WLDEV		"[wldev][wlan] "
-#define WLDEV_ERROR_TEXT		USER_PREFIX_WLDEV
-#define WLDEV_INFO_TEXT			USER_PREFIX_WLDEV
-#else
-#define WLDEV_ERROR_TEXT		"WLDEV-ERROR) "
-#define WLDEV_INFO_TEXT			"WLDEV-INFO) "
-#endif /* defined(CUSTOMER_DBG_PREFIX_ENABLE) */
-
-#define	WLDEV_ERROR(args)						\
-	do {										\
-		WL_DBG_PRINT_SYSTEM_TIME;		\
-		pr_cont(WLDEV_ERROR_TEXT);	\
-		pr_cont args;							\
+#define	WLDEV_ERROR_MSG(x, args...)						\
+	do {												\
+		printk(KERN_INFO DHD_LOG_PREFIXS "WLDEV-ERROR) " x, ## args);	\
 	} while (0)
+#define WLDEV_ERROR(x) WLDEV_ERROR_MSG x
 
-#define	WLDEV_INFO(args)						\
-	do {										\
-		WL_DBG_PRINT_SYSTEM_TIME;		\
-		pr_cont(WLDEV_INFO_TEXT);	\
-		pr_cont args;							\
+#define	WLDEV_INFO_MSG(x, args...)						\
+	do {												\
+		printk(KERN_INFO DHD_LOG_PREFIXS "WLDEV-INFO) " x, ## args);	\
 	} while (0)
+#define WLDEV_INFO(x) WLDEV_INFO_MSG x
 
 extern int dhd_ioctl_entry_local(struct net_device *net, wl_ioctl_t *ioc, int cmd);
 
-static s32 wldev_ioctl(
+s32 wldev_ioctl(
 	struct net_device *dev, u32 cmd, void *arg, u32 len, u32 set)
 {
 	s32 ret = 0;
 	struct wl_ioctl  ioc;
 
-#if defined(BCMDONGLEHOST)
-
-	bzero(&ioc, sizeof(ioc));
+	memset(&ioc, 0, sizeof(ioc));
 	ioc.cmd = cmd;
 	ioc.buf = arg;
 	ioc.len = len;
 	ioc.set = set;
 	ret = dhd_ioctl_entry_local(dev, (wl_ioctl_t *)&ioc, cmd);
-#else
-	struct ifreq ifr;
-	mm_segment_t fs;
-
-	bzero(&ioc, sizeof(ioc));
-	ioc.cmd = cmd;
-	ioc.buf = arg;
-	ioc.len = len;
-	ioc.set = set;
-
-	strlcpy(ifr.ifr_name, dev->name, sizeof(ifr.ifr_name));
-	ifr.ifr_data = (caddr_t)&ioc;
-
-	GETFS_AND_SETFS_TO_KERNEL_DS(fs);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31)
-	ret = dev->do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
-#else
-	ret = dev->netdev_ops->ndo_do_ioctl(dev, &ifr, SIOCDEVPRIVATE);
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 31) */
-	SETFS(fs);
-
-	ret = 0;
-#endif /* defined(BCMDONGLEHOST) */
 
 	return ret;
 }
@@ -129,11 +89,11 @@ s32 wldev_ioctl_set(
 #if defined(STRICT_GCC_WARNINGS) && defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-qual"
-#endif
+#endif // endif
 	return wldev_ioctl(dev, cmd, (void *)arg, len, 1);
 #if defined(STRICT_GCC_WARNINGS) && defined(__GNUC__)
 #pragma GCC diagnostic pop
-#endif
+#endif // endif
 
 }
 
@@ -148,7 +108,7 @@ s32 wldev_ioctl_get(
  * wl_iw, wl_cfg80211 and wl_cfgp2p
  */
 static s32 wldev_mkiovar(
-	const s8 *iovar_name, const s8 *param, u32 paramlen,
+	const s8 *iovar_name, const s8 *param, s32 paramlen,
 	s8 *iovar_buf, u32 buflen)
 {
 	s32 iolen = 0;
@@ -159,7 +119,7 @@ static s32 wldev_mkiovar(
 
 s32 wldev_iovar_getbuf(
 	struct net_device *dev, s8 *iovar_name,
-	const void *param, u32 paramlen, void *buf, u32 buflen, struct mutex* buf_sync)
+	const void *param, s32 paramlen, void *buf, s32 buflen, struct mutex* buf_sync)
 {
 	s32 ret = 0;
 	if (buf_sync) {
@@ -168,7 +128,7 @@ s32 wldev_iovar_getbuf(
 
 	if (buf && (buflen > 0)) {
 		/* initialize the response buffer */
-		bzero(buf, buflen);
+		memset(buf, 0, buflen);
 	} else {
 		ret = BCME_BADARG;
 		goto exit;
@@ -213,7 +173,7 @@ s32 wldev_iovar_setint(
 	s8 iovar_buf[WLC_IOCTL_SMLEN];
 
 	val = htod32(val);
-	bzero(iovar_buf, sizeof(iovar_buf));
+	memset(iovar_buf, 0, sizeof(iovar_buf));
 	return wldev_iovar_setbuf(dev, iovar, &val, sizeof(val), iovar_buf,
 		sizeof(iovar_buf), NULL);
 }
@@ -224,7 +184,7 @@ s32 wldev_iovar_getint(
 	s8 iovar_buf[WLC_IOCTL_SMLEN];
 	s32 err;
 
-	bzero(iovar_buf, sizeof(iovar_buf));
+	memset(iovar_buf, 0, sizeof(iovar_buf));
 	err = wldev_iovar_getbuf(dev, iovar, pval, sizeof(*pval), iovar_buf,
 		sizeof(iovar_buf), NULL);
 	if (err == 0)
@@ -252,7 +212,7 @@ s32 wldev_mkiovar_bsscfg(
 	/* initialize buffer */
 	if (!iovar_buf || buflen <= 0)
 		return BCME_BADARG;
-	bzero(iovar_buf, buflen);
+	memset(iovar_buf, 0, buflen);
 
 	if (bssidx == 0) {
 		return wldev_mkiovar(iovar_name, param, paramlen,
@@ -264,7 +224,7 @@ s32 wldev_mkiovar_bsscfg(
 	iolen = prefixlen + namelen + sizeof(u32) + paramlen;
 
 	if (iolen > (u32)buflen) {
-		WLDEV_ERROR(("wldev_mkiovar_bsscfg: buffer is too short\n"));
+		WLDEV_ERROR(("%s: buffer is too short\n", __FUNCTION__));
 		return BCME_BUFTOOSHORT;
 	}
 
@@ -338,7 +298,7 @@ s32 wldev_iovar_setint_bsscfg(
 	s8 iovar_buf[WLC_IOCTL_SMLEN];
 
 	val = htod32(val);
-	bzero(iovar_buf, sizeof(iovar_buf));
+	memset(iovar_buf, 0, sizeof(iovar_buf));
 	return wldev_iovar_setbuf_bsscfg(dev, iovar, &val, sizeof(val), iovar_buf,
 		sizeof(iovar_buf), bssidx, NULL);
 }
@@ -349,7 +309,7 @@ s32 wldev_iovar_getint_bsscfg(
 	s8 iovar_buf[WLC_IOCTL_SMLEN];
 	s32 err;
 
-	bzero(iovar_buf, sizeof(iovar_buf));
+	memset(iovar_buf, 0, sizeof(iovar_buf));
 	err = wldev_iovar_getbuf_bsscfg(dev, iovar, pval, sizeof(*pval), iovar_buf,
 		sizeof(iovar_buf), bssidx, NULL);
 	if (err == 0)
@@ -359,76 +319,6 @@ s32 wldev_iovar_getint_bsscfg(
 	}
 	return err;
 }
-
-#if defined(BCMDONGLEHOST) && defined(WL_CFG80211)
-s32 wldev_iovar_setint_no_wl(struct net_device *dev, s8 *iovar, s32 val)
-{
-	struct bcm_cfg80211 *cfg = wl_get_cfg(dev);
-	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
-	s32 ifidx = dhd_net2idx(dhd->info, dev);
-
-	if (ifidx == DHD_BAD_IF) {
-		WLDEV_ERROR(("wldev_iovar_setint_no_wl: bad ifidx for ndev:%s\n", dev->name));
-		return BCME_ERROR;
-	}
-
-	val = htod32(val);
-	return dhd_iovar(dhd, ifidx, iovar,
-		(char *)&val, sizeof(val), NULL, 0, TRUE);
-}
-
-s32 wldev_iovar_getint_no_wl(struct net_device *dev, s8 *iovar, s32 *val)
-{
-	struct bcm_cfg80211 *cfg = wl_get_cfg(dev);
-	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
-	s32 ifidx = dhd_net2idx(dhd->info, dev);
-	u8 iovar_buf[WLC_IOCTL_SMLEN];
-	s32 err;
-
-	if (ifidx == DHD_BAD_IF) {
-		WLDEV_ERROR(("wldev_iovar_getint_no_wl: bad ifidx for ndev:%s\n", dev->name));
-		return BCME_ERROR;
-	}
-
-	val = htod32(val);
-	bzero(iovar_buf, sizeof(iovar_buf));
-	err = dhd_iovar(dhd, ifidx, iovar, (char *)val, sizeof(*val),
-			iovar_buf, sizeof(iovar_buf), FALSE);
-	if (err == BCME_OK) {
-		(void)memcpy_s(val, sizeof(*val), iovar_buf, sizeof(*val));
-		*val = dtoh32(*val);
-	}
-	return err;
-}
-
-s32 wldev_iovar_no_wl(struct net_device *dev, s8 *iovar,
-		s8 *param_buf, uint param_len, s8 *res_buf, u32 res_len, bool set)
-{
-	struct bcm_cfg80211 *cfg = wl_get_cfg(dev);
-	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
-	s32 ifidx = dhd_net2idx(dhd->info, dev);
-
-	if (ifidx == DHD_BAD_IF) {
-		WLDEV_ERROR(("wldev_iovar_no_wl: bad ifidx for ndev:%s\n", dev->name));
-		return BCME_ERROR;
-	}
-
-	return dhd_iovar(dhd, ifidx, iovar, param_buf, param_len, res_buf, res_len, set);
-}
-
-s32 wldev_ioctl_no_wl(struct net_device *dev, u32 cmd, s8 *buf, u32 len, bool set)
-{
-	struct bcm_cfg80211 *cfg = wl_get_cfg(dev);
-	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
-	s32 ifidx = dhd_net2idx(dhd->info, dev);
-
-	if (ifidx == DHD_BAD_IF) {
-		WLDEV_ERROR(("wldev_ioctl_no_wl: bad ifidx for ndev:%s\n", dev->name));
-		return BCME_ERROR;
-	}
-	return dhd_wl_ioctl_cmd(dhd, cmd, buf, len, set, ifidx);
-}
-#endif /* BCMDONGLEHOST && WL_CFG80211 */
 
 int wldev_get_link_speed(
 	struct net_device *dev, int *plink_speed)
@@ -454,7 +344,7 @@ int wldev_get_rssi(
 
 	if (!scb_val)
 		return -ENOMEM;
-	bzero(scb_val, sizeof(scb_val_t));
+	memset(scb_val, 0, sizeof(scb_val_t));
 	error = wldev_ioctl_get(dev, WLC_GET_RSSI, scb_val, sizeof(scb_val_t));
 	if (unlikely(error))
 		return error;
@@ -469,7 +359,7 @@ int wldev_get_ssid(
 
 	if (!pssid)
 		return -ENOMEM;
-	bzero(pssid, sizeof(wlc_ssid_t));
+	memset(pssid, 0, sizeof(wlc_ssid_t));
 	error = wldev_ioctl_get(dev, WLC_GET_SSID, pssid, sizeof(wlc_ssid_t));
 	if (unlikely(error))
 		return error;
@@ -499,7 +389,6 @@ int wldev_set_band(
 	}
 	return error;
 }
-
 int wldev_get_datarate(struct net_device *dev, int *datarate)
 {
 	int error = 0;
@@ -514,6 +403,7 @@ int wldev_get_datarate(struct net_device *dev, int *datarate)
 	return error;
 }
 
+#ifdef WL_CFG80211
 extern chanspec_t
 wl_chspec_driver_to_host(chanspec_t chanspec);
 #define WL_EXTRA_BUF_MAX 2048
@@ -524,24 +414,24 @@ int wldev_get_mode(
 	int chanspec = 0;
 	uint16 band = 0;
 	uint16 bandwidth = 0;
-	wl_bss_info_v109_t *bss = NULL;
+	wl_bss_info_t *bss = NULL;
 	char* buf = NULL;
 
 	buf = kzalloc(WL_EXTRA_BUF_MAX, GFP_KERNEL);
 	if (!buf) {
-		WLDEV_ERROR(("wldev_get_mode: ENOMEM\n"));
+		WLDEV_ERROR(("%s:ENOMEM\n", __FUNCTION__));
 		return -ENOMEM;
 	}
 
 	*(u32*) buf = htod32(WL_EXTRA_BUF_MAX);
 	error = wldev_ioctl_get(dev, WLC_GET_BSS_INFO, (void*)buf, WL_EXTRA_BUF_MAX);
 	if (error) {
-		WLDEV_ERROR(("wldev_get_mode: failed:%d\n", error));
+		WLDEV_ERROR(("%s:failed:%d\n", __FUNCTION__, error));
 		kfree(buf);
 		buf = NULL;
 		return error;
 	}
-	bss = (wl_bss_info_v109_t*)(buf + 4);
+	bss = (wl_bss_info_t*)(buf + 4);
 	chanspec = wl_chspec_driver_to_host(bss->chanspec);
 
 	band = chanspec & WL_CHANSPEC_BAND_MASK;
@@ -549,23 +439,23 @@ int wldev_get_mode(
 
 	if (band == WL_CHANSPEC_BAND_2G) {
 		if (bss->n_cap)
-			strlcpy(cap, "n", caplen);
+			strncpy(cap, "n", caplen);
 		else
-			strlcpy(cap, "bg", caplen);
+			strncpy(cap, "bg", caplen);
 	} else if (band == WL_CHANSPEC_BAND_5G) {
 		if (bandwidth == WL_CHANSPEC_BW_80)
-			strlcpy(cap, "ac", caplen);
+			strncpy(cap, "ac", caplen);
 		else if ((bandwidth == WL_CHANSPEC_BW_40) || (bandwidth == WL_CHANSPEC_BW_20)) {
 			if ((bss->nbss_cap & 0xf00) && (bss->n_cap))
-				strlcpy(cap, "n|ac", caplen);
+				strncpy(cap, "n|ac", caplen);
 			else if (bss->n_cap)
-				strlcpy(cap, "n", caplen);
+				strncpy(cap, "n", caplen);
 			else if (bss->vht_cap)
-				strlcpy(cap, "ac", caplen);
+				strncpy(cap, "ac", caplen);
 			else
-				strlcpy(cap, "a", caplen);
+				strncpy(cap, "a", caplen);
 		} else {
-			WLDEV_ERROR(("wldev_get_mode: Mode get failed\n"));
+			WLDEV_ERROR(("%s:Mode get failed\n", __FUNCTION__));
 			error = BCME_ERROR;
 		}
 
@@ -574,32 +464,71 @@ int wldev_get_mode(
 	buf = NULL;
 	return error;
 }
+#endif
 
 int wldev_set_country(
-	struct net_device *dev, char *country_code, bool notify, int revinfo)
+	struct net_device *dev, char *country_code, bool notify, bool user_enforced, int revinfo)
 {
-#if defined(BCMDONGLEHOST)
 	int error = -1;
 	wl_country_t cspec = {{0}, 0, {0}};
-	char smbuf[WLC_IOCTL_SMLEN];
+	scb_val_t scbval;
+#ifdef WL_CFG80211
+	struct wireless_dev *wdev = ndev_to_wdev(dev);
+	struct wiphy *wiphy = wdev->wiphy;
+	struct bcm_cfg80211 *cfg = wiphy_priv(wiphy);
+#endif /* WL_CFG80211 */
 
 	if (!country_code)
 		return error;
 
-	cspec.rev = revinfo;
-	strlcpy(cspec.country_abbrev, country_code, WL_CCODE_LEN + 1);
-	strlcpy(cspec.ccode, country_code, WL_CCODE_LEN + 1);
-	dhd_get_customized_country_code(dev, (char *)&cspec.country_abbrev, &cspec);
-	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
-		smbuf, sizeof(smbuf), NULL);
+	bzero(&scbval, sizeof(scb_val_t));
+	error = wldev_iovar_getbuf(dev, "country", NULL, 0, &cspec, sizeof(cspec), NULL);
 	if (error < 0) {
-		WLDEV_ERROR(("wldev_set_country: set country for %s as %s rev %d failed\n",
-			country_code, cspec.ccode, cspec.rev));
+		WLDEV_ERROR(("%s: get country failed = %d\n", __FUNCTION__, error));
 		return error;
 	}
-	dhd_bus_country_set(dev, &cspec, notify);
-	WLDEV_INFO(("wldev_set_country: set country for %s as %s rev %d\n",
-		country_code, cspec.ccode, cspec.rev));
-#endif /* defined(BCMDONGLEHOST) */
+
+	if ((error < 0) ||
+		dhd_force_country_change(dev) ||
+	    (strncmp(country_code, cspec.ccode, WLC_CNTRY_BUF_SZ) != 0)) {
+
+#ifdef WL_CFG80211
+		if ((user_enforced) && (wl_get_drv_status(cfg, CONNECTED, dev)))
+#else
+		if (user_enforced)
+#endif /* WL_CFG80211 */
+		{
+			bzero(&scbval, sizeof(scb_val_t));
+			error = wldev_ioctl_set(dev, WLC_DISASSOC,
+			                        &scbval, sizeof(scb_val_t));
+			if (error < 0) {
+				WLDEV_ERROR(("%s: set country failed due to Disassoc error %d\n",
+					__FUNCTION__, error));
+				return error;
+			}
+		}
+
+#ifdef WL_CFG80211
+		wl_cfg80211_scan_abort(cfg);
+#endif
+
+		cspec.rev = revinfo;
+		strlcpy(cspec.country_abbrev, country_code, WLC_CNTRY_BUF_SZ);
+		strlcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
+		error = dhd_conf_map_country_list(dhd_get_pub(dev), &cspec);
+		if (error)
+			dhd_get_customized_country_code(dev, (char *)&cspec.country_abbrev, &cspec);
+		error = dhd_conf_set_country(dhd_get_pub(dev), &cspec);
+		if (error < 0) {
+			WLDEV_ERROR(("%s: set country for %s as %s rev %d failed\n",
+				__FUNCTION__, country_code, cspec.ccode, cspec.rev));
+			return error;
+		}
+		dhd_conf_fix_country(dhd_get_pub(dev));
+		dhd_conf_get_country(dhd_get_pub(dev), &cspec);
+		dhd_bus_country_set(dev, &cspec, notify);
+		printf("%s: set country for %s as %s rev %d\n",
+			__FUNCTION__, country_code, cspec.ccode, cspec.rev);
+	}
 	return 0;
 }

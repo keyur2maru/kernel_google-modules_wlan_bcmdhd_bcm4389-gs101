@@ -2,7 +2,7 @@
  * Broadcom SDIO/PCMCIA
  * Software-specific definitions shared between device and host side
  *
- * Copyright (C) 2022, Broadcom.
+ * Copyright (C) 1999-2019, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -18,8 +18,14 @@
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
  *
+ *      Notwithstanding the above, under no circumstances may you combine this
+ * software in any way with any other Broadcom software provided under a license
+ * other than the GPL, without Broadcom's express prior written consent.
  *
- * <<Broadcom-WL-IPTag/Dual:>>
+ *
+ * <<Broadcom-WL-IPTag/Open:>>
+ *
+ * $Id: bcmsdpcm.h 700076 2017-05-17 14:42:22Z $
  */
 
 #ifndef	_bcmsdpcm_h_
@@ -102,7 +108,6 @@
 /*
  * Software-defined protocol header
  */
-/* Replace all this with packed struct */
 
 /* Current protocol version */
 #define SDPCM_PROT_VERSION	4
@@ -154,7 +159,7 @@
 
 #define SDPCM_FLAG_RESVD0	0x01
 #define SDPCM_FLAG_RESVD1	0x02
-#define SDPCM_FLAG_GSPI_TXENAB	0x04	/* GSPI Tx enable (PR55150 only) */
+#define SDPCM_FLAG_GSPI_TXENAB	0x04
 #define SDPCM_FLAG_GLOMDESC	0x08	/* Superframe descriptor mask */
 
 /* For GLOM_CHANNEL frames, use a flag to indicate descriptor frame */
@@ -279,6 +284,8 @@ typedef volatile struct {
 #define SDPCM_SHARED_SET_BRPT      0x1000
 #define SDPCM_SHARED_PENDING_BRPT  0x2000
 #define SDPCM_SHARED_FATAL_LOGBUF_VALID	0x100000
+#define SDPCM_SHARED_RXLIM_POST    0x4000
+#define SDPCM_SHARED_TXSEQ_SYNC    0x4000
 
 typedef struct {
 	uint32	flags;
@@ -290,6 +297,9 @@ typedef struct {
 	uint32  msgtrace_addr;
 	uint32  fwid;
 	uint32  device_fatal_logbuf_start;
+#ifdef BCMSDIO_TXSEQ_SYNC
+	uint32	txseq_sync_addr;
+#endif /* BCMSDIO_TXSEQ_SYNC */
 } sdpcm_shared_t;
 
 /* Device F/W provides the following access function:
